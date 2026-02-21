@@ -96,7 +96,7 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="UTestEvolution.SafeTry.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.Safetry.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.Safetry.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -108,9 +108,9 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="UTestEvolution.Threading.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.Threading.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.Std.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.System.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.Threading.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.Std.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.System.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -154,6 +154,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
+                <DeployFile LocalName="PTestThreading.exe" Configuration="Debug" Class="ProjectOutput"/>
                 <DeployFile LocalName="PTestThreading.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>PTestThreading.exe</RemoteName>

@@ -88,8 +88,8 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="UTestEvolution.Option.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.Option.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.ResultPair.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.Option.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.ResultPair.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -127,6 +127,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
+                <DeployFile LocalName="Win32\Debug\PTestOption.exe" Configuration="Debug" Class="ProjectOutput"/>
                 <DeployFile LocalName="Win32\Debug\PTestOption.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>PTestOption.exe</RemoteName>

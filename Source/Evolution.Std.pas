@@ -24,7 +24,7 @@
   @Discord(https://discord.gg/T2zJC8zX)
 }
 
-unit System.Evolution.Std;
+unit Evolution.Std;
 
 interface
 
@@ -36,7 +36,7 @@ uses
   DateUtils,
   Generics.Collections,
   Generics.Defaults,
-  System.Evolution.System;
+  Evolution.System;
 
 type
   TPointerStream = class(TCustomMemoryStream)

@@ -7,7 +7,7 @@ program CurryingDemo;
 uses
   SysUtils,
   UCurryingDemo in 'UCurryingDemo.pas',
-  System.Evolution.Currying in '..\Source\System.Evolution.Currying.pas';
+  Evolution.Currying in '..\Source\Evolution.Currying.pas';
 
 begin
   try

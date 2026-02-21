@@ -125,7 +125,7 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="UTestEvolution.ResultPair.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.ResultPair.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.ResultPair.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

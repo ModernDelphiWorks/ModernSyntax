@@ -17,7 +17,7 @@ uses
   {$ENDIF }
   DUnitX.TestFramework,
   UTestEvolutoin.Objects in 'UTestEvolutoin.Objects.pas',
-  System.Evolution.Objects in '..\..\Source\System.Evolution.Objects.pas',
+  Evolution.Objects in '..\..\Source\Evolution.Objects.pas',
   UTestEvolution.Muttle in 'UTestEvolution.Muttle.pas';
 
 {$IFNDEF TESTINSIGHT}

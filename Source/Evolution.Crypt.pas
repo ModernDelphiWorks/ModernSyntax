@@ -24,14 +24,14 @@
   @Discord(https://discord.gg/T2zJC8zX)
 }
 
-unit System.Evolution.Crypt;
+unit Evolution.Crypt;
 
 interface
 
 uses
   Classes,
   SysUtils,
-  System.Evolution.Std;
+  Evolution.Std;
 
 type
   PPacket = ^TPacket;

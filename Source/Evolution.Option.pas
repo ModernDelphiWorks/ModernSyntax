@@ -24,7 +24,7 @@
   @Discord(https://discord.gg/T2zJC8zX)
 }
 
-unit System.Evolution.Option;
+unit Evolution.Option;
 
 interface
 
@@ -32,7 +32,7 @@ uses
   Rtti,
   SysUtils,
   Variants,
-  System.Evolution.ResultPair;
+  Evolution.ResultPair;
 
 type
   TSomeProc<T> = reference to procedure(const AValue: T);

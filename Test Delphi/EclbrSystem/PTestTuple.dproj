@@ -107,13 +107,13 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="UTestEvolution.Tuple.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.Tuple.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.Match.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.ArrowFun.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.RegEx.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.ResultPair.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.Std.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.System.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.Tuple.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.Match.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.ArrowFun.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.RegEx.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.ResultPair.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.Std.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.System.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -157,6 +157,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
+                <DeployFile LocalName="PTestTuple.exe" Configuration="Debug" Class="ProjectOutput"/>
                 <DeployFile LocalName="PTestTuple.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>PTestTuple.exe</RemoteName>

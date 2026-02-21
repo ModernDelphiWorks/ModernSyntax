@@ -107,13 +107,13 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="..\..\Source\System.Evolution.Stream.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.Stream.pas"/>
         <DCCReference Include="UTestEvolution.StreamReader.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.ArrowFun.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.Objects.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.Std.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.Threading.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.System.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.ArrowFun.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.Objects.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.Std.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.Threading.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.System.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -157,6 +157,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
+                <DeployFile LocalName="PTestStream.exe" Configuration="Debug" Class="ProjectOutput"/>
                 <DeployFile LocalName="PTestStream.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>PTestStream.exe</RemoteName>

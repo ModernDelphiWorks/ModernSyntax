@@ -110,10 +110,10 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="UTestEvolution.Std.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.Objects.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.Crypt.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.Std.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.System.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.Objects.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.Crypt.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.Std.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.System.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -9,8 +9,8 @@ uses
   DateUtils,
   Classes,
   Generics.Collections,
-  System.Evolution.Threading,
-  System.Evolution.System;
+  Evolution.Threading,
+  Evolution.System;
 
 type
   [TestFixture]

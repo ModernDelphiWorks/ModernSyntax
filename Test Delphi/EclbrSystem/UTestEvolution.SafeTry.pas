@@ -4,7 +4,7 @@ interface
 
 uses
   DUnitX.TestFramework,
-  System.Evolution.Safetry,
+  Evolution.Safetry,
   SysUtils,
   Rtti;
 

@@ -15,10 +15,10 @@ uses
   {$ENDIF }
   DUnitX.TestFramework,
   UTestEvolution.DotEnv in 'UTestEvolution.DotEnv.pas',
-  System.Evolution.DotEnv in '..\..\Source\System.Evolution.DotEnv.pas',
-  System.Evolution.Crypt in '..\..\Source\System.Evolution.Crypt.pas',
-  System.Evolution.Std in '..\..\Source\System.Evolution.Std.pas',
-  System.Evolution.System in '..\..\Source\System.Evolution.System.pas';
+  Evolution.DotEnv in '..\..\Source\Evolution.DotEnv.pas',
+  Evolution.Crypt in '..\..\Source\Evolution.Crypt.pas',
+  Evolution.Std in '..\..\Source\Evolution.Std.pas',
+  Evolution.System in '..\..\Source\Evolution.System.pas';
 
 { keep comment here to protect the following conditional from being removed by the IDE when adding a unit }
 {$IFNDEF TESTINSIGHT}
