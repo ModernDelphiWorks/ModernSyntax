@@ -16,8 +16,8 @@ uses
   {$ENDIF }
   DUnitX.TestFramework,
   UTestEvolution.Option in 'UTestEvolution.Option.pas',
-  System.Evolution.Option in '..\..\Source\System.Evolution.Option.pas',
-  System.Evolution.ResultPair in '..\..\Source\System.Evolution.ResultPair.pas';
+  Evolution.Option in '..\..\Source\Evolution.Option.pas',
+  Evolution.ResultPair in '..\..\Source\Evolution.ResultPair.pas';
 
 { keep comment here to protect the following conditional from being removed by the IDE when adding a unit }
 {$IFNDEF TESTINSIGHT}

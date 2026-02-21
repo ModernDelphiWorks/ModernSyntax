@@ -24,7 +24,7 @@
   @Discord(https://discord.gg/T2zJC8zX)
 }
 
-unit System.Evolution.Match;
+unit Evolution.Match;
 
 interface
 
@@ -36,10 +36,10 @@ uses
   Classes,
   Generics.Collections,
   Generics.Defaults,
-  System.Evolution.Std,
-  System.Evolution.RegEx,
-  System.Evolution.ResultPair,
-  System.Evolution.System;
+  Evolution.Std,
+  Evolution.RegEx,
+  Evolution.ResultPair,
+  Evolution.System;
 
 type
   TCaseType = (
@@ -63,7 +63,7 @@ type
   );
 
   PTuple = ^Tuple;
-  Tuple = System.Evolution.System.Tuple;
+  Tuple = Evolution.System.Tuple;
 
   // Enumeration to represent different states of the match session
   {$SCOPEDENUMS ON}

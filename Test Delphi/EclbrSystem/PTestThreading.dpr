@@ -17,9 +17,9 @@ uses
   {$ENDIF }
   DUnitX.TestFramework,
   UTestEvolution.Threading in 'UTestEvolution.Threading.pas',
-  System.Evolution.Threading in '..\..\Source\System.Evolution.Threading.pas',
-  System.Evolution.Std in '..\..\Source\System.Evolution.Std.pas',
-  System.Evolution.System in '..\..\Source\System.Evolution.System.pas';
+  Evolution.Threading in '..\..\Source\Evolution.Threading.pas',
+  Evolution.Std in '..\..\Source\Evolution.Std.pas',
+  Evolution.System in '..\..\Source\Evolution.System.pas';
 
 {$IFNDEF TESTINSIGHT}
 var

@@ -7,9 +7,9 @@ uses
   SysUtils,
   Variants,
   DUnitX.TestFramework,
-  System.Evolution.Tuple,
-  System.Evolution.Match,
-  System.Evolution.ResultPair;
+  Evolution.Tuple,
+  Evolution.Match,
+  Evolution.ResultPair;
 
 type
   TPessoa = class
@@ -58,7 +58,7 @@ type
 implementation
 
 uses
-  System.Evolution.ArrowFun;
+  Evolution.ArrowFun;
 
 { TestTuple }
 

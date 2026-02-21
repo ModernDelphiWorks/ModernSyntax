@@ -91,7 +91,7 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="UCurryingDemo.pas"/>
-        <DCCReference Include="..\Source\System.Evolution.Currying.pas"/>
+        <DCCReference Include="..\Source\Evolution.Currying.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -129,6 +129,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
+                <DeployFile LocalName="Win32\Debug\CurryingDemo.exe" Configuration="Debug" Class="ProjectOutput"/>
                 <DeployFile LocalName="Win32\Debug\CurryingDemo.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>CurryingDemo.exe</RemoteName>

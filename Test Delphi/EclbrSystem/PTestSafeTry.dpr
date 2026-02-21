@@ -17,7 +17,7 @@ uses
   {$ENDIF }
   DUnitX.TestFramework,
   UTestEvolution.SafeTry in 'UTestEvolution.SafeTry.pas',
-  System.Evolution.Safetry in '..\..\Source\System.Evolution.Safetry.pas';
+  Evolution.Safetry in '..\..\Source\Evolution.Safetry.pas';
 
 { keep comment here to protect the following conditional from being removed by the IDE when adding a unit }
 {$IFNDEF TESTINSIGHT}

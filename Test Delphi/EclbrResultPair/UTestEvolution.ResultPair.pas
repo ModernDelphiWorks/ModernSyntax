@@ -5,7 +5,7 @@ interface
 uses
   DUnitX.TestFramework,
   System.SysUtils,
-  System.Evolution.ResultPair,
+  Evolution.ResultPair,
   Rtti, Classes;
 
 type

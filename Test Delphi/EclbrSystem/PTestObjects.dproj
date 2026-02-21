@@ -108,7 +108,7 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="UTestEvolutoin.Objects.pas"/>
-        <DCCReference Include="..\..\Source\System.Evolution.Objects.pas"/>
+        <DCCReference Include="..\..\Source\Evolution.Objects.pas"/>
         <DCCReference Include="UTestEvolution.Muttle.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
@@ -153,6 +153,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
+                <DeployFile LocalName="PTestObjects.exe" Configuration="Debug" Class="ProjectOutput"/>
                 <DeployFile LocalName="PTestObjects.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>PTestObjects.exe</RemoteName>

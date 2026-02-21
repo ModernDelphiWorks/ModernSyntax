@@ -24,7 +24,7 @@
   @Discord(https://discord.gg/T2zJC8zX)
 }
 
-unit System.Evolution.ArrowFun;
+unit Evolution.ArrowFun;
 
 interface
 

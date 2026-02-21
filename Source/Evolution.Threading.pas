@@ -26,7 +26,7 @@
 
 {$T+}
 
-unit System.Evolution.Threading;
+unit Evolution.Threading;
 
 interface
 
@@ -36,11 +36,11 @@ uses
   Classes,
   SyncObjs,
   Threading,
-  System.Evolution.System;
+  Evolution.System;
 
 type
   TValue = Rtti.TValue;
-  TFuture = System.Evolution.System.TFuture;
+  TFuture = Evolution.System.TFuture;
   EAsyncAwait = Exception;
 
   IAutoLock = interface

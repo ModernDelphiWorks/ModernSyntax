@@ -17,7 +17,7 @@ uses
   {$ENDIF }
   DUnitX.TestFramework,
   UTestEvolution.Currying in 'UTestEvolution.Currying.pas',
-  System.Evolution.Currying in '..\..\Source\System.Evolution.Currying.pas';
+  Evolution.Currying in '..\..\Source\Evolution.Currying.pas';
 
 { keep comment here to protect the following conditional from being removed by the IDE when adding a unit }
 {$IFNDEF TESTINSIGHT}
