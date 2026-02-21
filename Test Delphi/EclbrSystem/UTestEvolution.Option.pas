@@ -6,8 +6,8 @@ uses
   DUnitX.TestFramework,
   SysUtils,
   Variants,
-  Evolution.Option,
-  Evolution.Resultpair;
+  System.Evolution.Option,
+  System.Evolution.Resultpair;
 
 type
   [TestFixture]

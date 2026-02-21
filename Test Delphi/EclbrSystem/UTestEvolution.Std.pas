@@ -9,10 +9,10 @@ uses
   StrUtils,
   Classes,
   Generics.Collections,
-  Evolution.Objects,
-  Evolution.System,
-  Evolution.Std,
-  Evolution.Crypt;
+  System.Evolution.Objects,
+  System.Evolution.System,
+  System.Evolution.Std,
+  System.Evolution.Crypt;
 
 type
   [TestFixture]
