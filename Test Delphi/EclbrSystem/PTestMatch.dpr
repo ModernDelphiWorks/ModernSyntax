@@ -17,13 +17,13 @@ uses
   {$ENDIF }
   DUnitX.TestFramework,
   UTestMS.Match in 'UTestMS.Match.pas',
-  System.Match in '..\..\Source\System.Match.pas',
-  System.RegExpression in '..\..\Source\System.RegExpression.pas',
-  System.ResultPair in '..\..\Source\System.ResultPair.pas',
-  System.Tuple in '..\..\Source\System.Tuple.pas',
-  System.ArrowFun in '..\..\Source\System.ArrowFun.pas',
-  System.Std in '..\..\Source\System.Std.pas',
-  System.Future in '..\..\Source\System.Future.pas';
+  ModernSyntax.Match in '..\..\Source\ModernSyntax.Match.pas',
+  ModernSyntax.RegExpression in '..\..\Source\ModernSyntax.RegExpression.pas',
+  ModernSyntax.ResultPair in '..\..\Source\ModernSyntax.ResultPair.pas',
+  ModernSyntax.Tuple in '..\..\Source\ModernSyntax.Tuple.pas',
+  ModernSyntax.ArrowFun in '..\..\Source\ModernSyntax.ArrowFun.pas',
+  ModernSyntax.Std in '..\..\Source\ModernSyntax.Std.pas',
+  ModernSyntax in '..\..\Source\ModernSyntax.pas';
 
 {$IFNDEF TESTINSIGHT}
 var

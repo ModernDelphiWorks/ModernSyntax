@@ -107,13 +107,13 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="..\..\Source\System.Stream.pas"/>
+        <DCCReference Include="..\..\Source\ModernSyntax.Stream.pas"/>
         <DCCReference Include="UTestMS.StreamReader.pas"/>
-        <DCCReference Include="..\..\Source\System.ArrowFun.pas"/>
-        <DCCReference Include="..\..\Source\System.Objects.pas"/>
-        <DCCReference Include="..\..\Source\System.Std.pas"/>
-        <DCCReference Include="..\..\Source\System.Async.pas"/>
-        <DCCReference Include="..\..\Source\System.Future.pas"/>
+        <DCCReference Include="..\..\Source\ModernSyntax.ArrowFun.pas"/>
+        <DCCReference Include="..\..\Source\ModernSyntax.Objects.pas"/>
+        <DCCReference Include="..\..\Source\ModernSyntax.Std.pas"/>
+        <DCCReference Include="..\..\Source\ModernSyntax.Async.pas"/>
+        <DCCReference Include="..\..\Source\ModernSyntax.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

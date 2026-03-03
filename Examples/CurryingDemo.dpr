@@ -7,7 +7,7 @@ program CurryingDemo;
 uses
   SysUtils,
   UCurryingDemo in 'UCurryingDemo.pas',
-  System.Currying in '..\Source\System.Currying.pas';
+  ModernSyntax.Currying in '..\Source\ModernSyntax.Currying.pas';
 
 begin
   try

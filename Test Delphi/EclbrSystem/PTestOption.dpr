@@ -16,8 +16,8 @@ uses
   {$ENDIF }
   DUnitX.TestFramework,
   UTestMS.Option in 'UTestMS.Option.pas',
-  System.Option in '..\..\Source\System.Option.pas',
-  System.ResultPair in '..\..\Source\System.ResultPair.pas';
+  ModernSyntax.Option in '..\..\Source\ModernSyntax.Option.pas',
+  ModernSyntax.ResultPair in '..\..\Source\ModernSyntax.ResultPair.pas';
 
 { keep comment here to protect the following conditional from being removed by the IDE when adding a unit }
 {$IFNDEF TESTINSIGHT}

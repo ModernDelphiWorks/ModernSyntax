@@ -16,7 +16,7 @@ uses
   {$ENDIF }
   DUnitX.TestFramework,
   UTestMS.ResultPair in 'UTestMS.ResultPair.pas',
-  System.ResultPair in '..\..\Source\System.ResultPair.pas';
+  ModernSyntax.ResultPair in '..\..\Source\ModernSyntax.ResultPair.pas';
 
 {$IFNDEF TESTINSIGHT}
 var

@@ -91,7 +91,7 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="UCurryingDemo.pas"/>
-        <DCCReference Include="..\Source\System.Currying.pas"/>
+        <DCCReference Include="..\Source\ModernSyntax.Currying.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -16,13 +16,13 @@ uses
   DUnitX.Loggers.Xml.NUnit,
   {$ENDIF }
   DUnitX.TestFramework,
-  System.Stream in '..\..\Source\System.Stream.pas',
+  ModernSyntax.Stream in '..\..\Source\ModernSyntax.Stream.pas',
   UTestMS.StreamReader in 'UTestMS.StreamReader.pas',
-  System.ArrowFun in '..\..\Source\System.ArrowFun.pas',
-  System.Objects in '..\..\Source\System.Objects.pas',
-  System.Std in '..\..\Source\System.Std.pas',
-  System.Async in '..\..\Source\System.Async.pas',
-  System.Future in '..\..\Source\System.Future.pas';
+  ModernSyntax.ArrowFun in '..\..\Source\ModernSyntax.ArrowFun.pas',
+  ModernSyntax.Objects in '..\..\Source\ModernSyntax.Objects.pas',
+  ModernSyntax.Std in '..\..\Source\ModernSyntax.Std.pas',
+  ModernSyntax.Async in '..\..\Source\ModernSyntax.Async.pas',
+  ModernSyntax in '..\..\Source\ModernSyntax.pas';
 
 {$IFNDEF TESTINSIGHT}
 var

@@ -15,10 +15,10 @@ uses
   {$ENDIF }
   DUnitX.TestFramework,
   UTestMS.DotEnv in 'UTestMS.DotEnv.pas',
-  System.DotEnv in '..\..\Source\System.DotEnv.pas',
-  System.Crypt in '..\..\Source\System.Crypt.pas',
-  System.Std in '..\..\Source\System.Std.pas',
-  System.Future in '..\..\Source\System.Future.pas';
+  ModernSyntax.DotEnv in '..\..\Source\ModernSyntax.DotEnv.pas',
+  ModernSyntax.Crypt in '..\..\Source\ModernSyntax.Crypt.pas',
+  ModernSyntax.Std in '..\..\Source\ModernSyntax.Std.pas',
+  ModernSyntax in '..\..\Source\ModernSyntax.pas';
 
 { keep comment here to protect the following conditional from being removed by the IDE when adding a unit }
 {$IFNDEF TESTINSIGHT}

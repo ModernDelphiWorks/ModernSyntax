@@ -108,7 +108,7 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="UTestMS.Objects.pas"/>
-        <DCCReference Include="..\..\Source\System.Objects.pas"/>
+        <DCCReference Include="..\..\Source\ModernSyntax.Objects.pas"/>
         <DCCReference Include="UTestMS.Muttle.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

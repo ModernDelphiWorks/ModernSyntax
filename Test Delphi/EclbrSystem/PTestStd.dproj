@@ -110,10 +110,10 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="UTestMS.Std.pas"/>
-        <DCCReference Include="..\..\Source\System.Objects.pas"/>
-        <DCCReference Include="..\..\Source\System.Crypt.pas"/>
-        <DCCReference Include="..\..\Source\System.Std.pas"/>
-        <DCCReference Include="..\..\Source\System.Future.pas"/>
+        <DCCReference Include="..\..\Source\ModernSyntax.Objects.pas"/>
+        <DCCReference Include="..\..\Source\ModernSyntax.Crypt.pas"/>
+        <DCCReference Include="..\..\Source\ModernSyntax.Std.pas"/>
+        <DCCReference Include="..\..\Source\ModernSyntax.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

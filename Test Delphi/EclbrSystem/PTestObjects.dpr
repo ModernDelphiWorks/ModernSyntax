@@ -17,7 +17,7 @@ uses
   {$ENDIF }
   DUnitX.TestFramework,
   UTestMS.Objects in 'UTestMS.Objects.pas',
-  System.Objects in '..\..\Source\System.Objects.pas',
+  ModernSyntax.Objects in '..\..\Source\ModernSyntax.Objects.pas',
   UTestMS.Muttle in 'UTestMS.Muttle.pas';
 
 {$IFNDEF TESTINSIGHT}

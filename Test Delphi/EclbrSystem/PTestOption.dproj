@@ -88,8 +88,8 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="UTestMS.Option.pas"/>
-        <DCCReference Include="..\..\Source\System.Option.pas"/>
-        <DCCReference Include="..\..\Source\System.ResultPair.pas"/>
+        <DCCReference Include="..\..\Source\ModernSyntax.Option.pas"/>
+        <DCCReference Include="..\..\Source\ModernSyntax.ResultPair.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

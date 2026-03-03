@@ -17,7 +17,7 @@ uses
   {$ENDIF }
   DUnitX.TestFramework,
   UTestMS.SafeTry in 'UTestMS.SafeTry.pas',
-  System.Safetry in '..\..\Source\System.Safetry.pas';
+  ModernSyntax.Safetry in '..\..\Source\ModernSyntax.Safetry.pas';
 
 { keep comment here to protect the following conditional from being removed by the IDE when adding a unit }
 {$IFNDEF TESTINSIGHT}

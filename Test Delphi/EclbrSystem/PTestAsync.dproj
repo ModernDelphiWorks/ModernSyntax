@@ -108,9 +108,9 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="UTestMMS.Threading.pas"/>
-        <DCCReference Include="..\..\Source\System.Async.pas"/>
-        <DCCReference Include="..\..\Source\System.Std.pas"/>
-        <DCCReference Include="..\..\Source\System.Future.pas"/>
+        <DCCReference Include="..\..\Source\ModernSyntax.Async.pas"/>
+        <DCCReference Include="..\..\Source\ModernSyntax.Std.pas"/>
+        <DCCReference Include="..\..\Source\ModernSyntax.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

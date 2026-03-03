@@ -17,9 +17,9 @@ uses
   {$ENDIF }
   DUnitX.TestFramework,
   UTestMMS.Threading in 'UTestMMS.Threading.pas',
-  System.Async in '..\..\Source\System.Async.pas',
-  System.Std in '..\..\Source\System.Std.pas',
-  System.Future in '..\..\Source\System.Future.pas';
+  ModernSyntax.Async in '..\..\Source\ModernSyntax.Async.pas',
+  ModernSyntax.Std in '..\..\Source\ModernSyntax.Std.pas',
+  ModernSyntax in '..\..\Source\ModernSyntax.pas';
 
 {$IFNDEF TESTINSIGHT}
 var
