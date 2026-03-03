@@ -7,11 +7,11 @@ uses
   SysUtils,
   Classes,
   Generics.Collections,
-  System.Match,
-  System.Tuple,
+  ModernSyntax.Match,
+  ModernSyntax.Tuple,
 //  Evolution.Std,
-  System.ArrowFun,
-  System.ResultPair,
+  ModernSyntax.ArrowFun,
+  ModernSyntax.ResultPair,
   DUnitX.TestFramework;
 
 type

@@ -9,10 +9,10 @@ uses
   StrUtils,
   Classes,
   Generics.Collections,
-  System.Objects,
-  System.Future,
-  System.Std,
-  System.Crypt;
+  ModernSyntax.Objects,
+  ModernSyntax,
+  ModernSyntax.Std,
+  ModernSyntax.Crypt;
 
 type
   [TestFixture]

@@ -24,7 +24,7 @@
   @Discord(https://discord.gg/T2zJC8zX)
 }
 
-unit System.ArrowFun;
+unit ModernSyntax.ArrowFun;
 
 interface
 
@@ -33,8 +33,8 @@ uses
   SysUtils,
   TypInfo,
   Generics.Collections,
-  System.Std,
-  System.Future;
+  ModernSyntax.Std,
+  ModernSyntax;
 
 type
   EArrowException = Exception;

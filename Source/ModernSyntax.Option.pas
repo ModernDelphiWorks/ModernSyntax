@@ -24,7 +24,7 @@
   @Discord(https://discord.gg/T2zJC8zX)
 }
 
-unit System.Option;
+unit ModernSyntax.Option;
 
 interface
 
@@ -32,7 +32,7 @@ uses
   Rtti,
   SysUtils,
   Variants,
-  System.ResultPair;
+  ModernSyntax.ResultPair;
 
 type
   TSomeProc<T> = reference to procedure(const AValue: T);

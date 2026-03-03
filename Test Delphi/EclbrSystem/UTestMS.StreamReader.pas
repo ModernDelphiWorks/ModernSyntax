@@ -7,8 +7,8 @@ uses
   Generics.Collections,
   SysUtils,
   Classes,
-  System.Stream,
-  System.Async;
+  ModernSyntax.Stream,
+  ModernSyntax.Async;
 
 type
   TPerson = class

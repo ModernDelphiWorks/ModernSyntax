@@ -6,7 +6,7 @@ uses
   DUnitX.TestFramework,
   Classes,
   SysUtils,
-  System.DotEnv;
+  ModernSyntax.DotEnv;
 
 type
   [TestFixture]

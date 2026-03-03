@@ -24,14 +24,14 @@
   @Discord(https://discord.gg/T2zJC8zX)
 }
 
-unit System.Crypt;
+unit ModernSyntax.Crypt;
 
 interface
 
 uses
   Classes,
   SysUtils,
-  System.Std;
+  ModernSyntax.Std;
 
 type
   PPacket = ^TPacket;

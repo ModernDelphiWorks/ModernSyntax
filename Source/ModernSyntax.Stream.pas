@@ -24,7 +24,7 @@
   @Discord(https://discord.gg/T2zJC8zX)
 }
 
-unit System.Stream;
+unit ModernSyntax.Stream;
 
 interface
 
@@ -32,9 +32,9 @@ uses
   Classes,
   SysUtils,
   Generics.Collections,
-  System.Objects,
+  ModernSyntax.Objects,
   System.Threading,
-  System.Future;
+  ModernSyntax;
 
 type
   TStreamReader = Classes.TStreamReader;

@@ -24,7 +24,7 @@
   @Discord(https://discord.gg/T2zJC8zX)
 }
 
-unit System.Safetry;
+unit ModernSyntax.Safetry;
 
 interface
 

@@ -26,7 +26,7 @@
 
 {$T+}
 
-unit System.Async;
+unit ModernSyntax.Async;
 
 interface
 
@@ -36,11 +36,11 @@ uses
   Classes,
   SyncObjs,
   Threading,
-  System.Future;
+  ModernSyntax;
 
 type
   TValue = Rtti.TValue;
-  TFuture = System.Future.TFuture;
+  TFuture = ModernSyntax.TFuture;
   EAsyncAwait = Exception;
 
   IAutoLock = interface

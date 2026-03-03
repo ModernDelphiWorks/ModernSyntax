@@ -7,7 +7,7 @@ uses
   SysUtils,
   Generics.Collections,
   DateUtils,
-  System.Currying;
+  ModernSyntax.Currying;
 
 procedure ExampleOpByte;
 procedure ExampleOpShortInt;

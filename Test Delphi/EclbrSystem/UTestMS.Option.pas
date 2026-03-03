@@ -6,8 +6,8 @@ uses
   DUnitX.TestFramework,
   SysUtils,
   Variants,
-  System.Option,
-  System.ResultPair;
+  ModernSyntax.Option,
+  ModernSyntax.ResultPair;
 
 type
   [TestFixture]

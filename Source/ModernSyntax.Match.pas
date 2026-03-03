@@ -24,7 +24,7 @@
   @Discord(https://discord.gg/T2zJC8zX)
 }
 
-unit System.Match;
+unit ModernSyntax.Match;
 
 interface
 
@@ -36,10 +36,10 @@ uses
   Classes,
   Generics.Collections,
   Generics.Defaults,
-  System.Std,
-  System.RegExpression,
-  System.ResultPair,
-  System.Future;
+  ModernSyntax.Std,
+  ModernSyntax.RegExpression,
+  ModernSyntax.ResultPair,
+  ModernSyntax;
 
 type
   TCaseType = (
@@ -63,7 +63,7 @@ type
   );
 
   PTuple = ^Tuple;
-  Tuple = System.Future.Tuple;
+  Tuple = ModernSyntax.Tuple;
 
   // Enumeration to represent different states of the match session
   {$SCOPEDENUMS ON}

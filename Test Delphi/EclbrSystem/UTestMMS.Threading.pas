@@ -9,8 +9,8 @@ uses
   DateUtils,
   Classes,
   Generics.Collections,
-  System.Async,
-  System.Future;
+  ModernSyntax.Async,
+  ModernSyntax;
 
 type
   [TestFixture]

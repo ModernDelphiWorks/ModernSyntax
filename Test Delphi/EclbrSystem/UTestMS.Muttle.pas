@@ -4,7 +4,7 @@ interface
 
 uses
   DUnitX.TestFramework,
-  System.Objects,
+  ModernSyntax.Objects,
   System.SysUtils,
   System.Rtti,
   System.Variants;
