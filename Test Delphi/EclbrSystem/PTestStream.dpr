@@ -16,13 +16,13 @@ uses
   DUnitX.Loggers.Xml.NUnit,
   {$ENDIF }
   DUnitX.TestFramework,
-  Evolution.Stream in '..\..\Source\Evolution.Stream.pas',
-  UTestEvolution.StreamReader in 'UTestEvolution.StreamReader.pas',
-  Evolution.ArrowFun in '..\..\Source\Evolution.ArrowFun.pas',
-  Evolution.Objects in '..\..\Source\Evolution.Objects.pas',
-  Evolution.Std in '..\..\Source\Evolution.Std.pas',
-  Evolution.Threading in '..\..\Source\Evolution.Threading.pas',
-  Evolution.System in '..\..\Source\Evolution.System.pas';
+  System.Stream in '..\..\Source\System.Stream.pas',
+  UTestMS.StreamReader in 'UTestMS.StreamReader.pas',
+  System.ArrowFun in '..\..\Source\System.ArrowFun.pas',
+  System.Objects in '..\..\Source\System.Objects.pas',
+  System.Std in '..\..\Source\System.Std.pas',
+  System.Async in '..\..\Source\System.Async.pas',
+  System.Future in '..\..\Source\System.Future.pas';
 
 {$IFNDEF TESTINSIGHT}
 var

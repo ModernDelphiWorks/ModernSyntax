@@ -15,9 +15,9 @@ uses
   DUnitX.Loggers.Xml.NUnit,
   {$ENDIF }
   DUnitX.TestFramework,
-  UTestEvolution.Option in 'UTestEvolution.Option.pas',
-  Evolution.Option in '..\..\Source\Evolution.Option.pas',
-  Evolution.ResultPair in '..\..\Source\Evolution.ResultPair.pas';
+  UTestMS.Option in 'UTestMS.Option.pas',
+  System.Option in '..\..\Source\System.Option.pas',
+  System.ResultPair in '..\..\Source\System.ResultPair.pas';
 
 { keep comment here to protect the following conditional from being removed by the IDE when adding a unit }
 {$IFNDEF TESTINSIGHT}

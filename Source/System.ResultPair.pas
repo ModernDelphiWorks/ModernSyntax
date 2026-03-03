@@ -24,7 +24,7 @@
   @Discord(https://discord.gg/T2zJC8zX)
 }
 
-unit Evolution.ResultPair;
+unit System.ResultPair;
 
 interface
 

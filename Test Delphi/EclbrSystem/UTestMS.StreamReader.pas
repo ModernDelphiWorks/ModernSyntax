@@ -1,4 +1,4 @@
-unit UTestEvolution.StreamReader;
+unit UTestMS.StreamReader;
 
 interface
 
@@ -7,8 +7,8 @@ uses
   Generics.Collections,
   SysUtils,
   Classes,
-  Evolution.Stream,
-  Evolution.threading;
+  System.Stream,
+  System.Async;
 
 type
   TPerson = class

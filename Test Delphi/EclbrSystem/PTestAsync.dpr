@@ -1,4 +1,4 @@
-program PTestThreading;
+program PTestAsync;
 
 //{$DEFINE CI}
 
@@ -16,10 +16,10 @@ uses
   DUnitX.Loggers.Xml.NUnit,
   {$ENDIF }
   DUnitX.TestFramework,
-  UTestEvolution.Threading in 'UTestEvolution.Threading.pas',
-  Evolution.Threading in '..\..\Source\Evolution.Threading.pas',
-  Evolution.Std in '..\..\Source\Evolution.Std.pas',
-  Evolution.System in '..\..\Source\Evolution.System.pas';
+  UTestMMS.Threading in 'UTestMMS.Threading.pas',
+  System.Async in '..\..\Source\System.Async.pas',
+  System.Std in '..\..\Source\System.Std.pas',
+  System.Future in '..\..\Source\System.Future.pas';
 
 {$IFNDEF TESTINSIGHT}
 var

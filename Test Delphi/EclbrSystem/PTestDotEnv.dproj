@@ -87,11 +87,11 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="UTestEvolution.DotEnv.pas"/>
-        <DCCReference Include="..\..\Source\Evolution.DotEnv.pas"/>
-        <DCCReference Include="..\..\Source\Evolution.Crypt.pas"/>
-        <DCCReference Include="..\..\Source\Evolution.Std.pas"/>
-        <DCCReference Include="..\..\Source\Evolution.System.pas"/>
+        <DCCReference Include="UTestMS.DotEnv.pas"/>
+        <DCCReference Include="..\..\Source\System.DotEnv.pas"/>
+        <DCCReference Include="..\..\Source\System.Crypt.pas"/>
+        <DCCReference Include="..\..\Source\System.Std.pas"/>
+        <DCCReference Include="..\..\Source\System.Future.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -989,7 +989,6 @@
                 <ProjectRoot Platform="Win64x" Name="$(PROJECTNAME)"/>
             </Deployment>
             <Platforms>
-                <Platform value="Linux64">False</Platform>
                 <Platform value="Win32">True</Platform>
                 <Platform value="Win64">False</Platform>
             </Platforms>

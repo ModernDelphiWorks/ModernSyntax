@@ -1,11 +1,11 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<test-results name="D:\PROJETOS-Brasil\Evolution4D\Test Delphi\EclbrResultPair\PTestResultPair.exe" total="18" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2025-04-05" time="3.151">
+<test-results name="D:\Ecossistema-Delphi\ModernSyntax\Test Delphi\EclbrResultPair\PTestResultPair.exe" total="18" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-03-03" time="2.649">
   <culture-info current-culture="en" current-uiculture="en" />
-  <test-suite type="Assembly" name="PTestResultPair.exe" executed="true" result="Success" success="True" time="3.151" asserts="0">
+  <test-suite type="Assembly" name="PTestResultPair.exe" executed="true" result="Success" success="True" time="2.649" asserts="0">
     <results>
-        <test-suite type="Namespace" name="UTestEvolution" executed="true" result="Success" success="True" time="3.151" asserts="0" >
+        <test-suite type="Namespace" name="UTestMS" executed="true" result="Success" success="True" time="2.649" asserts="0" >
           <results>
-              <test-suite type="Fixture" name="TTestTResultPair" executed="True" result="Success" success="True" time="3.151" >
+              <test-suite type="Fixture" name="TTestTResultPair" executed="True" result="Success" success="True" time="2.649" >
                 <results>
                   <test-case name="TestMap" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                   <test-case name="TestMapTryException" executed="True" result="Success" success="True" time="0.000" asserts="0" />
@@ -17,11 +17,11 @@
                   <test-case name="TestReduceSuccess" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                   <test-case name="TestReduceFailure" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                   <test-case name="TestGetSuccessOrElse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
-                  <test-case name="TestGetSuccessOrException" executed="True" result="Success" success="True" time="2.338" asserts="0" />
+                  <test-case name="TestGetSuccessOrException" executed="True" result="Success" success="True" time="1.896" asserts="0" />
                   <test-case name="TestGetSuccessOrDefaultNoDefault" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                   <test-case name="TestGetSuccessOrDefaultWithDefault" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                   <test-case name="TestGetFailureOrElse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
-                  <test-case name="TestGetFailureOrException" executed="True" result="Success" success="True" time="0.810" asserts="0" />
+                  <test-case name="TestGetFailureOrException" executed="True" result="Success" success="True" time="0.743" asserts="0" />
                   <test-case name="TestGetFailureOrDefaultNoDefault" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                   <test-case name="TestGetFailureOrDefaultWithDefault" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                   <test-case name="TestObjectCleanup" executed="True" result="Success" success="True" time="0.000" asserts="0" />

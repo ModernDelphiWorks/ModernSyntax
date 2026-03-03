@@ -95,8 +95,8 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="UTestEvolution.SafeTry.pas"/>
-        <DCCReference Include="..\..\Source\Evolution.Safetry.pas"/>
+        <DCCReference Include="UTestMS.SafeTry.pas"/>
+        <DCCReference Include="..\..\Source\System.Safetry.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
@@ -994,7 +994,6 @@
                 <ProjectRoot Platform="Win64x" Name="$(PROJECTNAME)"/>
             </Deployment>
             <Platforms>
-                <Platform value="Linux64">False</Platform>
                 <Platform value="Win32">True</Platform>
                 <Platform value="Win64">True</Platform>
             </Platforms>

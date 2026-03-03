@@ -24,7 +24,7 @@
   @Discord(https://discord.gg/T2zJC8zX)
 }
 
-unit Evolution.ArrowFun;
+unit System.ArrowFun;
 
 interface
 
@@ -33,8 +33,8 @@ uses
   SysUtils,
   TypInfo,
   Generics.Collections,
-  Evolution.Std,
-  Evolution.System;
+  System.Std,
+  System.Future;
 
 type
   EArrowException = Exception;

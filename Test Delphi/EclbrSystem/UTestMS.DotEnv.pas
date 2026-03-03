@@ -1,4 +1,4 @@
-unit UTestEvolution.DotEnv;
+unit UTestMS.DotEnv;
 
 interface
 
@@ -6,7 +6,7 @@ uses
   DUnitX.TestFramework,
   Classes,
   SysUtils,
-  Evolution.DotEnv;
+  System.DotEnv;
 
 type
   [TestFixture]

@@ -1,4 +1,4 @@
-unit UTestEvolution.Tuple;
+unit UTestMS.Tuple;
 
 interface
 
@@ -7,9 +7,9 @@ uses
   SysUtils,
   Variants,
   DUnitX.TestFramework,
-  Evolution.Tuple,
-  Evolution.Match,
-  Evolution.ResultPair;
+  System.Tuple,
+  System.Match,
+  System.ResultPair;
 
 type
   TPessoa = class
@@ -58,7 +58,7 @@ type
 implementation
 
 uses
-  Evolution.ArrowFun;
+  System.ArrowFun;
 
 { TestTuple }
 

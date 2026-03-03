@@ -1,4 +1,4 @@
-unit UTestEvolution.Option;
+unit UTestMS.Option;
 
 interface
 
@@ -6,8 +6,8 @@ uses
   DUnitX.TestFramework,
   SysUtils,
   Variants,
-  Evolution.Option,
-  Evolution.Resultpair;
+  System.Option,
+  System.ResultPair;
 
 type
   [TestFixture]

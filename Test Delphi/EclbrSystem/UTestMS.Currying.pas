@@ -1,4 +1,4 @@
-unit UTestEvolution.Currying;
+unit UTestMS.Currying;
 
 interface
 
@@ -11,7 +11,7 @@ uses
   System.Diagnostics,
   System.Classes,
   DateUtils,
-  Evolution.Currying;
+  System.Currying;
 
 type
 

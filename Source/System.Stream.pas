@@ -24,7 +24,7 @@
   @Discord(https://discord.gg/T2zJC8zX)
 }
 
-unit Evolution.Stream;
+unit System.Stream;
 
 interface
 
@@ -32,9 +32,9 @@ uses
   Classes,
   SysUtils,
   Generics.Collections,
-  Evolution.Objects,
-  Evolution.threading,
-  Evolution.System;
+  System.Objects,
+  System.Threading,
+  System.Future;
 
 type
   TStreamReader = Classes.TStreamReader;

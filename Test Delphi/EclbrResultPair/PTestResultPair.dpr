@@ -15,8 +15,8 @@ uses
   DUnitX.Loggers.Xml.NUnit,
   {$ENDIF }
   DUnitX.TestFramework,
-  UTestEvolution.ResultPair in 'UTestEvolution.ResultPair.pas',
-  Evolution.ResultPair in '..\..\Source\Evolution.ResultPair.pas';
+  UTestMS.ResultPair in 'UTestMS.ResultPair.pas',
+  System.ResultPair in '..\..\Source\System.ResultPair.pas';
 
 {$IFNDEF TESTINSIGHT}
 var

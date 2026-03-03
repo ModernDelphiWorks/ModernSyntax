@@ -1,11 +1,11 @@
-unit UTestEvolution.ResultPair;
+unit UTestMS.ResultPair;
 
 interface
 
 uses
   DUnitX.TestFramework,
   System.SysUtils,
-  Evolution.ResultPair,
+  System.ResultPair,
   Rtti, Classes;
 
 type

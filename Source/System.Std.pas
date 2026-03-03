@@ -24,7 +24,7 @@
   @Discord(https://discord.gg/T2zJC8zX)
 }
 
-unit Evolution.Std;
+unit System.Std;
 
 interface
 
@@ -35,10 +35,11 @@ uses
   SysUtils,
   DateUtils,
   Generics.Collections,
-  Generics.Defaults,
-  Evolution.System;
+  Generics.Defaults;
 
 type
+  TListString = TList<String>;
+
   TPointerStream = class(TCustomMemoryStream)
   public
     constructor Create(P: Pointer; ASize: Integer);

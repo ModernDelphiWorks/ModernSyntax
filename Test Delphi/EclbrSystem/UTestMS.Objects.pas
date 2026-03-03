@@ -1,10 +1,10 @@
-unit UTestEvolutoin.Objects;
+unit UTestMS.Objects;
 
 interface
 
 uses
   DUnitX.TestFramework,
-  Evolution.Objects;
+  System.Objects;
 
 type
   TMyClass = class

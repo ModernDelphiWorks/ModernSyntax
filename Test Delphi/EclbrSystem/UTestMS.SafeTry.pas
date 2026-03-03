@@ -1,10 +1,10 @@
-unit UTestEvolution.SafeTry;
+unit UTestMS.SafeTry;
 
 interface
 
 uses
   DUnitX.TestFramework,
-  Evolution.Safetry,
+  System.Safetry,
   SysUtils,
   Rtti;
 

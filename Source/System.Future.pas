@@ -24,7 +24,7 @@
   @Discord(https://discord.gg/T2zJC8zX)
 }
 
-unit Evolution.System;
+unit System.Future;
 
 interface
 
@@ -35,10 +35,9 @@ uses
   Generics.Defaults;
 
 type
-  TListString = TList<String>;
   Tuple = array of TValue;
 
-  IEvolutoinObserver = interface
+  IMSObserver = interface
     ['{5887CDFF-DA23-4466-A5CB-FBA1DFEAF907}']
     procedure Update(const Progress: Integer);
   end;
