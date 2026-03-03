@@ -1,27 +1,14 @@
 ﻿{
-                          Apache License
-                      Version 2.0, January 2004
-                   http://www.apache.org/licenses/
+  ------------------------------------------------------------------------------
+  ModernSyntax
+  Bringing modern language syntax and paradigms to Delphi through classes and methods.
 
-       Licensed under the Apache License, Version 2.0 (the "License");
-       you may not use this file except in compliance with the License.
-       You may obtain a copy of the License at
+  SPDX-License-Identifier: Apache-2.0
+  Copyright (c) 2025-2026 Isaque Pinheiro
 
-             http://www.apache.org/licenses/LICENSE-2.0
-
-       Unless required by applicable law or agreed to in writing, software
-       distributed under the License is distributed on an "AS IS" BASIS,
-       WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-       See the License for the specific language governing permissions and
-       limitations under the License.
-}
-
-{
-  @abstract(Evolution4D: Modern Delphi Development Library for Delphi)
-  @description(Evolution4D brings modern, fluent, and expressive syntax to Delphi, making code cleaner and development more productive.)
-  @created(03 Abr 2025)
-  @author(Isaque Pinheiro <isaquepsp@gmail.com>)
-  @Discord(https://discord.gg/T2zJC8zX)
+  Licensed under the Apache License, Version 2.0.
+  See the LICENSE file in the project root for full license information.
+  ------------------------------------------------------------------------------
 }
 
 unit ModernSyntax.Stream;
@@ -184,7 +171,7 @@ type
     /// </remarks>
     /// <param name="AMappingFunc">A function that transforms a string into a TResult.</param>
     /// <returns>A TVector containing the mapped results.</returns>
-//    function Map<TResult>(const AMappingFunc: TFunc<String, TResult>): TVector<TResult>; overload;
+    //    function Map<TResult>(const AMappingFunc: TFunc<String, TResult>): TVector<TResult>; overload;
 
     /// <summary>
     ///   Filters the stream lines based on a predicate.
@@ -219,7 +206,7 @@ type
     /// </remarks>
     /// <param name="AKeySelector">A function that generates a key for each line.</param>
     /// <returns>A TMap of grouped lines.</returns>
-//    function GroupBy(const AKeySelector: TFunc<String, String>): TMap<String, TVector<String>>;
+    //    function GroupBy(const AKeySelector: TFunc<String, String>): TMap<String, TVector<String>>;
 
     /// <summary>
     ///   Removes duplicate lines from the stream.
