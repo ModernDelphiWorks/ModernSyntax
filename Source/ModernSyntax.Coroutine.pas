@@ -11,7 +11,7 @@
   ------------------------------------------------------------------------------
 }
 
-unit Evolution.Coroutine;
+unit ModernSyntax.Coroutine;
 
 interface
 

@@ -16,6 +16,7 @@ type
     FSuccessValue: Integer;
     FFailureValue: String;
     function _ResultTryExcept: TResultPair<Integer, String>;
+    function _Result_Nivel_1: TResultPair<TObject, String>;
   public
     [Setup]
     procedure Setup;
@@ -57,6 +58,10 @@ type
     procedure TestGetFailureOrDefaultWithDefault;
     [Test]
     procedure TestObjectCleanup;
+    [Test]
+    procedure TestValueSuccessNil;
+    [Test]
+    procedure TestValueSuccessNilSetFailure;
   end;
 
 implementation
@@ -319,6 +324,36 @@ var
 begin
   LResultPair := TResultPair<TStringList, String>.Success(TStringList.Create);
   Assert.IsTrue(LResultPair.IsSuccess);
+end;
+
+procedure TTestTResultPair.TestValueSuccessNil;
+var
+  LResultPair: TResultPair<TObject, String>;
+  LSum: Integer;
+begin
+  LResultPair.SetSuccess(nil);
+
+  Assert.IsNull(LResultPair.ValueSuccess);
+end;
+
+
+procedure TTestTResultPair.TestValueSuccessNilSetFailure;
+var
+  LResultPair: TResultPair<TObject, String>;
+  LSum: Integer;
+begin
+  LResultPair := _Result_Nivel_1;
+  if LResultPair.ValueSuccess = nil then
+    LResultPair.Failure('Nil');
+
+  Assert.IsTrue(LResultPair.ValueFailure = 'Nil');
+end;
+
+function TTestTResultPair._Result_Nivel_1: TResultPair<TObject, String>;
+begin
+  Result := TResultPair<TObject, String>.Success(nil);
+  if Result.ValueSuccess = nil then
+    Exit;
 end;
 
 initialization

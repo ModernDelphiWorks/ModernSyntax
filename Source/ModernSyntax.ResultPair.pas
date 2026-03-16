@@ -1,14 +1,27 @@
-ï»¿{
-  ------------------------------------------------------------------------------
-  ModernSyntax
-  Bringing modern language syntax and paradigms to Delphi through classes and methods.
+{
+               ECL Brasil - Essential Core Library for Delphi
 
-  SPDX-License-Identifier: Apache-2.0
-  Copyright (c) 2025-2026 Isaque Pinheiro
+                   Copyright (c) 2023, Isaque Pinheiro
+                          All rights reserved.
 
-  Licensed under the Apache License, Version 2.0.
-  See the LICENSE file in the project root for full license information.
-  ------------------------------------------------------------------------------
+                    GNU Lesser General Public License
+                      Versão 3, 29 de junho de 2007
+
+       Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/>
+       A todos é permitido copiar e distribuir cópias deste documento de
+       licença, mas mudá-lo não é permitido.
+
+       Esta versão da GNU Lesser General Public License incorpora
+       os termos e condições da versão 3 da GNU General Public License
+       Licença, complementado pelas permissões adicionais listadas no
+       arquivo LICENSE na pasta principal.
+}
+
+{
+  @abstract(ECLBr Library)
+  @created(23 Abr 2023)
+  @author(Isaque Pinheiro <isaquepsp@gmail.com>)
+  @Discord(https://discord.gg/T2zJC8zX)
 }
 
 unit ModernSyntax.ResultPair;
@@ -22,326 +35,543 @@ uses
   SysUtils;
 
 type
-  /// <summary>
-  /// Enumerator defining the possible states of a TResultPair: success or failure.
-  /// </summary>
-  TResultType = (rtSuccess, rtFailure);
+  TResultType = (rtNone, rtSuccess, rtFailure);
 
-  /// <summary>
-  /// Exception raised when attempting to access a success value from a TResultPair in a failure state.
-  /// </summary>
-  /// <param name="F">The generic type of the failure value associated with the exception.</param>
   EFailureException<F> = class(Exception)
   public
-    /// <summary>
-    /// Creates an instance of the exception with the provided failure value.
-    /// </summary>
-    /// <param name="AValue">The failure value that triggered the exception.</param>
     constructor Create(const AValue: F);
   end;
-
-  /// <summary>
-  /// Exception raised when attempting to access a failure value from a TResultPair in a success state.
-  /// </summary>
-  /// <param name="S">The generic type of the success value associated with the exception.</param>
   ESuccessException<S> = class(Exception)
   public
-    /// <summary>
-    /// Creates an instance of the exception with the provided success value.
-    /// </summary>
-    /// <param name="AValue">The success value that triggered the exception.</param>
     constructor Create(const AValue: S);
   end;
-
-  /// <summary>
-  /// Exception raised when a type incompatibility occurs during operations with TResultPair.
-  /// </summary>
   ETypeIncompatibility = class(Exception)
   public
-    /// <summary>
-    /// Creates an instance of the exception with an optional message.
-    /// </summary>
-    /// <param name="AMessage">A descriptive message about the incompatibility (optional).</param>
     constructor Create(const AMessage: String = '');
   end;
 
-  /// <summary>
-  /// Interface encapsulating a generic value for internal use within TResultPair.
-  /// </summary>
-  /// <param name="T">The generic type of the encapsulated value.</param>
-  IResultPairValue<T> = interface
-    ['{5E591299-AB59-45CD-8675-41F85C92436A}']
-    /// <summary>
-    /// Retrieves the encapsulated value.
-    /// </summary>
-    /// <returns>The value of type T.</returns>
-    function GetValue: T;
-    /// <summary>
-    /// Read-only property to access the encapsulated value.
-    /// </summary>
-    property Value: T read GetValue;
-  end;
-
-  /// <summary>
-  /// Internal class implementing IResultPairValue to store generic values in TResultPair,
-  /// automatically managing the release of objects when applicable.
-  /// </summary>
-  /// <param name="T">The generic type of the stored value.</param>
-  TResultPairValue<T> = class(TInterfacedObject, IResultPairValue<T>)
+  TResultPairValue<T> = record
   private
     FValue: T;
-    FIsObject: Boolean;
+    FHasValue: Boolean;
   public
-    /// <summary>
-    /// Creates an instance of TResultPairValue with the provided value.
-    /// </summary>
-    /// <param name="AValue">The value to be encapsulated.</param>
     constructor Create(AValue: T);
-    /// <summary>
-    /// Destructor that frees the encapsulated value if it is an object (tkClass).
-    /// </summary>
-    destructor Destroy; override;
-    /// <summary>
-    /// Retrieves the encapsulated value.
-    /// </summary>
-    /// <returns>The value of type T.</returns>
+    class function CreateNil: TResultPairValue<T>; static;
     function GetValue: T;
+    function HasValue: Boolean;
   end;
 
-  /// <summary>
-  /// Generic record representing a result pair, capable of holding either a success value (S) or a failure value (F).
-  /// Inspired by patterns like Rust's Result<T, E>, it encapsulates a binary state with functional methods.
-  /// </summary>
-  /// <param name="S">The generic type of the success value.</param>
-  /// <param name="F">The generic type of the failure value.</param>
   TResultPair<S, F> = record
   strict private
-    FSuccess: IResultPairValue<S>;      // Stores the success value, if present
-    FFailure: IResultPairValue<F>;      // Stores the failure value, if present
-    FResultType: TResultType;           // Indicates the current state (success or failure)
+    type
+      TMapFunc<Return> = reference to function(const ASelf: TResultPair<S, F>): Return;
+      TFuncOk = reference to function(const ASuccess: S): TResultPair<S, F>;
+      TFuncFail = reference to function(const AFailure: F): TResultPair<S, F>;
+      TFuncExec = reference to function: TResultPair<S, F>;
+  strict private
+    FSuccess: TResultPairValue<S>;
+    FFailure: TResultPairValue<F>;
+    FSuccessFuncs: TArray<TFuncOk>;
+    FFailureFuncs: TArray<TFuncFail>;
+    FResultType: TResultType;
+  strict private
+    procedure _DestroySuccess;
+    procedure _DestroyFailure;
 
     /// <summary>
-    /// Sets the internal success value, clearing any existing failure value.
+    ///   Sets the success value for the TResultPair.
     /// </summary>
-    /// <param name="ASuccess">The success value to be set.</param>
-    procedure _SetSuccessValue(const ASuccess: S); inline;
+    /// <remarks>
+    ///   Use this procedure to set the success value for the current TResultPair instance.
+    ///   The success value represents the successful result of an operation in the Railway Pattern.
+    /// </remarks>
+    /// <param name="ASuccess">
+    ///   The success value of type S to set.
+    /// </param>
+    procedure _SetSuccessValue(const ASuccess: S); //inline;
 
     /// <summary>
-    /// Sets the internal failure value, clearing any existing success value.
+    ///   Sets the failure value for the TResultPair.
     /// </summary>
-    /// <param name="AFailure">The failure value to be set.</param>
+    /// <remarks>
+    ///   Use this procedure to set the failure value for the current TResultPair instance.
+    ///   The failure value represents an error or failure in the Railway Pattern.
+    /// </remarks>
+    /// <param name="AFailure">
+    ///   The failure value of type F to set.
+    /// </param>
     procedure _SetFailureValue(const AFailure: F); inline;
 
     /// <summary>
-    /// Internal constructor initializing the TResultPair with a specific state.
-    /// Used by the static Success and Failure methods.
+    ///   Returns a TResultPair with the success value set.
     /// </summary>
-    /// <param name="AResultType">The initial state (rtSuccess or rtFailure).</param>
+    /// <remarks>
+    ///   Use this function to create and return a new TResultPair instance with the success
+    ///   value set to the value specified in <paramref name="ASuccess"/>.
+    /// </remarks>
+    /// <param name="ASuccess">
+    ///   The success value of type S to set in the returned TResultPair.
+    /// </param>
+    /// <returns>
+    ///   A new TResultPair instance with the success value set to <paramref name="ASuccess"/>.
+    /// </returns>
+    function _ReturnSuccess: TResultPair<S, F>; inline;
+
+    /// <summary>
+    ///   Returns a TResultPair with the failure value set.
+    /// </summary>
+    /// <remarks>
+    ///   Use this function to create and return a new TResultPair instance with the failure
+    ///   value set to the value specified in <paramref name="AFailure"/>.
+    /// </remarks>
+    /// <param name="AFailure">
+    ///   The failure value of type F to set in the returned TResultPair.
+    /// </param>
+    /// <returns>
+    ///   A new TResultPair instance with the failure value set to <paramref name="AFailure"/>.
+    /// </returns>
+    function _ReturnFailure: TResultPair<S, F>; inline;
+
     constructor Create(const AResultType: TResultType);
   public
-    // Implicit conversion operators
-
-    /// <summary>
-    /// Converts a TResultPair to an IResultPairValue containing the success value.
-    /// </summary>
-    /// <param name="V">The TResultPair to convert.</param>
-    /// <returns>The encapsulated success value as IResultPairValue<S>.</returns>
-    class operator Implicit(const V: TResultPair<S, F>): IResultPairValue<S>;
-
-    /// <summary>
-    /// Converts an IResultPairValue of success to a TResultPair in success state.
-    /// </summary>
-    /// <param name="V">The encapsulated success value.</param>
-    /// <returns>A TResultPair with rtSuccess state.</returns>
-    class operator Implicit(const V: IResultPairValue<S>): TResultPair<S, F>;
-
-    /// <summary>
-    /// Converts a TResultPair to an IResultPairValue containing the failure value.
-    /// </summary>
-    /// <param name="V">The TResultPair to convert.</param>
-    /// <returns>The encapsulated failure value as IResultPairValue<F>.</returns>
-    class operator Implicit(const V: TResultPair<S, F>): IResultPairValue<F>;
-
-    /// <summary>
-    /// Converts an IResultPairValue of failure to a TResultPair in failure state.
-    /// </summary>
-    /// <param name="V">The encapsulated failure value.</param>
-    /// <returns>A TResultPair with rtFailure state.</returns>
-    class operator Implicit(const V: IResultPairValue<F>): TResultPair<S, F>;
-
-    /// <summary>
-    /// Compares two TResultPair instances for equality based on their state (rtSuccess or rtFailure).
-    /// </summary>
-    /// <param name="Left">The first TResultPair to compare.</param>
-    /// <param name="Right">The second TResultPair to compare.</param>
-    /// <returns>True if both have the same state, False otherwise.</returns>
+    class operator Implicit(const V: TResultPair<S, F>): TResultPairValue<S>;
+    class operator Implicit(const V: TResultPairValue<S>): TResultPair<S, F>;
+    class operator Implicit(const V: TResultPair<S, F>): TResultPairValue<F>;
+    class operator Implicit(const V: TResultPairValue<F>): TResultPair<S, F>;
     class operator Equal(const Left, Right: TResultPair<S, F>): Boolean;
-
-    /// <summary>
-    /// Compares two TResultPair instances for inequality based on their state.
-    /// </summary>
-    /// <param name="Left">The first TResultPair to compare.</param>
-    /// <param name="Right">The second TResultPair to compare.</param>
-    /// <returns>True if the states differ, False otherwise.</returns>
     class operator NotEqual(const Left, Right: TResultPair<S, F>): Boolean;
 
     /// <summary>
-    /// Creates a TResultPair in the success state with the provided value.
+    ///   Creates and returns a new TResultPair<S, F> instance, initiating a Railway Pattern workflow.
     /// </summary>
-    /// <param name="ASuccess">The success value to encapsulate.</param>
-    /// <returns>A new TResultPair in rtSuccess state containing ASuccess.</returns>
-    class function Success(const ASuccess: S): TResultPair<S, F>; static; inline;
+    /// <returns>
+    ///   A new TResultPair<S, F> instance.
+    /// </returns>
+    class function New: TResultPair<S, F>; static; inline;
 
     /// <summary>
-    /// Creates a TResultPair in the failure state with the provided value.
+    ///   Releases any resources associated with the current TResultPair instance.
     /// </summary>
-    /// <param name="AFailure">The failure value to encapsulate.</param>
-    /// <returns>A new TResultPair in rtFailure state containing AFailure.</returns>
-    class function Failure(const AFailure: F): TResultPair<S, F>; static; inline;
+    /// <remarks>
+    ///   Use this procedure to release any resources, if applicable, and perform necessary cleanup
+    ///   for the current TResultPair instance. It's recommended to call this method when you are
+    ///   finished using the TResultPair object to ensure proper resource management.
+    /// </remarks>
+    procedure Dispose; inline;
 
     /// <summary>
-    /// Reduces the TResultPair to a single value of type R by applying a function that handles
-    /// both success and failure cases.
+    ///   Creates a new instance of TResultPair representing a success result.
     /// </summary>
-    /// <param name="AFunc">Function that takes the success or failure value and returns an R value.</param>
-    /// <returns>The resulting value of type R.</returns>
+    /// <param name="ASuccess">
+    ///   The success value to be stored in the instance.
+    /// </param>
+    /// <returns>
+    ///   A TResultPair instance with the given success value.
+    /// </returns>
+    function Success(const ASuccess: S): TResultPair<S, F>; //inline;
+
+    /// <summary>
+    ///   Creates a new instance of TResultPair representing a failure result.
+    /// </summary>
+    /// <param name="AFailure">
+    ///   The failure value to be stored in the instance.
+    /// </param>
+    /// <returns>
+    ///   A TResultPair instance with the given failure value.
+    /// </returns>
+    function Failure(const AFailure: F): TResultPair<S, F>; //inline;
+
+    /// <summary>
+    ///   Executes a success procedure if the current instance represents a success result,
+    ///   otherwise, executes a failure procedure.
+    /// </summary>
+    /// <param name="AFailureProc">
+    ///   The procedure to be executed in case of failure.
+    /// </param>
+    /// <param name="ASuccessProc">
+    ///   The procedure to be executed in case of success.
+    /// </param>
+    /// <returns>
+    ///   The same TResultPair instance for chaining.
+    /// </returns>
+//    function TryException(const ASuccessProc: TProc<S>;
+//      const AFailureProc: TProc<F>): TResultPair<S, F>; inline;
+
+    /// <summary>
+    ///   Performs a "fold" over the result, applying the success function if it is a success result
+    ///   or the failure function if it is a failure result.
+    /// </summary>
+    /// <typeparam name="R">
+    ///   The type of return resulting from the application of the success or failure functions.
+    /// </typeparam>
+    /// <param name="AFailureFunc">
+    ///   The function to be applied in case of failure.
+    /// </param>
+    /// <param name="ASuccessFunc">
+    ///   The function to be applied in case of success.
+    /// </param>
+    /// <returns>
+    ///   The result of the application of the function corresponding to the type of result.
+    /// </returns>
     function Reduce<R>(const AFunc: TFunc<S, F, R>): R; inline;
 
     /// <summary>
-    /// Applies a specific function to the success or failure value, returning a result of type R.
+    ///   Evaluates the result and executes the success function if it is a success result,
+    ///   or executes the failure function if it is a failure result.
     /// </summary>
-    /// <param name="ASuccessFunc">Function to apply in case of success.</param>
-    /// <param name="AFailureFunc">Function to apply in case of failure.</param>
-    /// <returns>The resulting value of type R.</returns>
+    /// <typeparam name="R">
+    ///   The type of return resulting from the execution of the success or failure function.
+    /// </typeparam>
+    /// <param name="ASuccessFunc">
+    ///   The function to be executed in case of success.
+    /// </param>
+    /// <param name="AFailureFunc">
+    ///   The function to be executed in case of failure.
+    /// </param>
+    /// <returns>
+    ///   The result of the execution of the function corresponding to the type of result.
+    /// </returns>
     function When<R>(const ASuccessFunc: TFunc<S, R>;
       const AFailureFunc: TFunc<F, R>): R; overload; inline;
-
-    /// <summary>
-    /// Executes a specific procedure for either the success or failure state, returning the original result pair.
-    /// This overload is useful when you only need to perform an action without transforming the result.
-    /// </summary>
-    /// <param name="ASuccessProc">Procedure to execute in case of success.</param>
-    /// <param name="AFailureProc">Procedure to execute in case of failure.</param>
-    /// <returns>The original TResultPair containing the success or failure value.</returns>
     function When(const ASuccessProc: TProc<S>;
       const AFailureProc: TProc<F>): TResultPair<S, F>; overload; inline;
-
     /// <summary>
-    /// Transforms the success value using the provided function, preserving the S type of the TResultPair.
-    /// The transformation is applied only if the state is rtSuccess and R is compatible with S.
+    ///   Applies a mapping function to the success part of the result, producing a new result
+    ///   containing the mapped value, keeping the failure part unchanged.
     /// </summary>
-    /// <param name="ASuccessFunc">Function that transforms the success value into a new value of type R.</param>
-    /// <returns>A new TResultPair with the transformed value or the original if not rtSuccess.</returns>
+    /// <typeparam name="R">
+    ///   The type of the value resulting after the mapping function is applied.
+    /// </typeparam>
+    /// <param name="ASuccessFunc">
+    ///   The mapping function to be applied to the success part of the result.
+    /// </param>
+    /// <returns>
+    ///   A new result with the success part mapped according to the specified function
+    ///   and the failure part kept intact.
+    /// </returns>
     function Map<R>(const ASuccessFunc: TFunc<S, R>): TResultPair<S, F>; overload; inline;
 
     /// <summary>
-    /// Transforms the failure value using the provided function, preserving the F type of the TResultPair.
-    /// The transformation is applied only if the state is rtFailure and R is compatible with F.
+    ///   Applies a mapping function to the failure part of the result, producing a new result
+    ///   containing the mapped failure part, keeping the success part unchanged.
     /// </summary>
-    /// <param name="AFailureFunc">Function that transforms the failure value into a new value of type R.</param>
-    /// <returns>A new TResultPair with the transformed value or the original if not rtFailure.</returns>
+    /// <typeparam name="R">
+    ///   The type of the value resulting after the mapping function is applied to the failure part.
+    /// </typeparam>
+    /// <param name="AFailureFunc">
+    ///   The mapping function to be applied to the failure part of the result.
+    /// </param>
+    /// <returns>
+    ///   A new result with the failure part mapped according to the specified function
+    ///   and the success part kept intact.
+    /// </returns>
     function Map<R>(const AFailureFunc: TFunc<F, R>): TResultPair<S, F>; overload; inline;
 
     /// <summary>
-    /// Transforms the success value using the provided function, preserving the S type of the TResultPair.
-    /// Similar to Map, but preserves the failure value if the state is rtFailure.
+    ///   Applies a mapping function that operates on the success part of the result, producing
+    ///   a new result that can contain a mapped success part or be converted to a failure,
+    ///   depending on the result of the mapping function.
     /// </summary>
-    /// <param name="ASuccessFunc">Function that transforms the success value into a new value of type R.</param>
-    /// <returns>A new TResultPair with the transformed value or the preserved failure value.</returns>
+    /// <typeparam name="R">
+    ///   The type of the value resulting after the mapping function is applied to the success part.
+    /// </typeparam>
+    /// <param name="ASuccessFunc">
+    ///   The mapping function to be applied to the success part of the result.
+    /// </param>
+    /// <returns>
+    ///   A new result with the success part mapped or converted to failure based on the result
+    ///   of the mapping function applied.
+    /// </returns>
     function FlatMap<R>(const ASuccessFunc: TFunc<S, R>): TResultPair<S, F>; overload; inline;
 
     /// <summary>
-    /// Transforms the failure value using the provided function, preserving the F type of the TResultPair.
-    /// Similar to Map, but applies the transformation only if the state is rtFailure.
+    ///   Applies a mapping function that operates on the failure part of the result, producing
+    ///   a new result that can contain a mapped failure part or be converted to success,
+    ///   depending on the result of the mapping function.
     /// </summary>
-    /// <param name="AFailureFunc">Function that transforms the failure value into a new value of type R.</param>
-    /// <returns>A new TResultPair with the transformed value or the original if not rtFailure.</returns>
+    /// <typeparam name="R">
+    ///   The type of the value resulting after the mapping function is applied to the failure part.
+    /// </typeparam>
+    /// <param name="AFailureFunc">
+    ///   The mapping function to be applied to the failure part of the result.
+    /// </param>
+    /// <returns>
+    ///   A new result with the failure part mapped or converted to success based on the result
+    ///   of the mapping function applied.
+    /// </returns>
     function FlatMap<R>(const AFailureFunc: TFunc<F, R>): TResultPair<S, F>; overload; inline;
 
     /// <summary>
-    /// Returns the success value or applies a fallback function if in failure state.
+    ///   Creates an instance of a success result containing the specified value.
     /// </summary>
-    /// <param name="ASuccessFunc">Fallback function that returns an S value in case of failure.</param>
-    /// <returns>The success value or the result of the fallback function.</returns>
+    /// <param name="ASuccess">
+    ///   The value to be placed in the success part of the result.
+    /// </param>
+    /// <returns>
+    ///   An instance of a result containing the success part filled with the specified value
+    ///   and the failure part empty.
+    /// </returns>
+    function Pure(const ASuccess: S): TResultPair<S, F>; overload; inline;
+
+    /// <summary>
+    ///   Creates an instance of a failure result containing the specified error.
+    /// </summary>
+    /// <param name="AFailure">
+    ///   The error to be placed in the failure part of the result.
+    /// </param>
+    /// <returns>
+    ///   An instance of a result containing the failure part filled with the specified error
+    ///   and the success part empty.
+    /// </returns>
+    function Pure(const AFailure: F): TResultPair<S, F>; overload; inline;
+
+    /// <summary>
+    ///   Swaps the success and failure parts of the result.
+    /// </summary>
+    /// <returns>
+    ///   A new instance of result with the success and failure parts swapped.
+    /// </returns>
+    function Swap: TResultPair<F, S>; inline;
+
+    /// <summary>
+    ///   Attempts to recover the failure, applying a conversion function <paramref name="AFailureFunc"/>
+    ///   to obtain a new value of type <typeparamref name="N"/> and keeping the success part
+    ///   unchanged.
+    /// </summary>
+    /// <typeparam name="N">
+    ///   The new type for the recovered failure part.
+    /// </typeparam>
+    /// <param name="AFailureFunc">
+    ///   The conversion function to be applied to the current failure part to obtain a value of <typeparamref name="N"/>.
+    /// </param>
+    /// <returns>
+    ///   A new instance of result with the recovered failure part or the success part.
+    /// </returns>
+    function Recover<R>(const AFailureFunc: TFunc<F, R>): TResultPair<R, S>; inline;
+
+    /// <summary>
+    ///   Gets the success value, applying a function <paramref name="ASuccessFunc"/> if
+    ///   the result is a success (<paramref name="rtSuccess"/>), or returning a default value
+    ///   if it is a failure (<paramref name="rtFailure"/>).
+    /// </summary>
+    /// <param name="ASuccessFunc">
+    ///   The function to be applied to the success value.
+    /// </param>
+    /// <returns>
+    ///   The success value, or the default value of the success part if it is a failure.
+    /// </returns>
     function SuccessOrElse(const ASuccessFunc: TFunc<S, S>): S; inline;
 
     /// <summary>
-    /// Returns the success value or raises an exception if in failure state.
+    ///   Gets the success value, returning it if the result is a success
+    ///   (<paramref name="rtSuccess"/>), or throwing the exception contained in the failure part
+    ///   (<paramref name="rtFailure"/>).
     /// </summary>
-    /// <returns>The success value of type S.</returns>
-    /// <exception cref="EFailureException<F>">Raised if the state is rtFailure.</exception>
+    /// <returns>
+    ///   The success value, or throws the exception contained in the failure part.
+    /// </returns>
+    /// <exception cref="EFailureValue">
+    ///   Exception contained in the failure part, if the result is a failure.
+    /// </exception>
     function SuccessOrException: S; inline;
 
     /// <summary>
-    /// Returns the success value or the default value of S if in failure state.
+    ///   Gets the success value, returning it if the result is a success
+    ///   (<paramref name="rtSuccess"/>), or a default value if it is a failure result
+    ///   (<paramref name="rtFailure"/>).
     /// </summary>
-    /// <returns>The success value or Default(S).</returns>
+    /// <returns>
+    ///   The success value if the result is a success, otherwise, a value
+    ///   provided as a default.
+    /// </returns>
     function SuccessOrDefault: S; overload; inline;
 
     /// <summary>
-    /// Returns the success value or a provided default value if in failure state.
+    ///   Gets the success value, returning it if the result is a success
+    ///   (<paramref name="rtSuccess"/>), or a default value provided as a parameter if
+    ///   it is a failure result (<paramref name="rtFailure"/>).
     /// </summary>
-    /// <param name="ADefault">The default value to return in case of failure.</param>
-    /// <returns>The success value or ADefault.</returns>
+    /// <param name="ADefault">
+    ///   The default value to be returned if the result is a failure.
+    /// </param>
+    /// <returns>
+    ///   The success value if the result is a success, otherwise, the value
+    ///   provided as a default.
+    /// </returns>
     function SuccessOrDefault(const ADefault: S): S; overload; inline;
 
     /// <summary>
-    /// Returns the failure value or applies a fallback function if in success state.
+    ///   Gets the failure value, throwing it as an exception if the result is a failure
+    ///   (<paramref name="rtFailure"/>).
     /// </summary>
-    /// <param name="AFailureFunc">Fallback function that returns an F value in case of success.</param>
-    /// <returns>The failure value or the result of the fallback function.</returns>
+    /// <exception cref="EFailureValueException">
+    ///   Thrown when the result is a failure, containing the failure value.
+    /// </exception>
+    /// <returns>
+    ///   The failure value, if the result is a failure.
+    /// </returns>
     function FailureOrElse(const AFailureFunc: TFunc<F, F>): F; inline;
 
     /// <summary>
-    /// Returns the failure value or raises an exception if in success state.
+    ///   Gets the failure value, throwing it as an exception if the result is a failure
+    ///   (<paramref name="rtFailure"/>).
     /// </summary>
-    /// <returns>The failure value of type F.</returns>
-    /// <exception cref="ESuccessException<S>">Raised if the state is rtSuccess.</exception>
+    /// <exception cref="EFailureValueException">
+    ///   Thrown when the result is a failure, containing the failure value.
+    /// </exception>
+    /// <returns>
+    ///   The failure value, if the result is a failure.
+    /// </returns>
     function FailureOrException: F; inline;
 
     /// <summary>
-    /// Returns the failure value or the default value of F if in success state.
+    ///   Gets the failure value or the default value of type <typeparamref name="F"/>,
+    ///   if the result is a failure (<paramref name="rtFailure"/>).
     /// </summary>
-    /// <returns>The failure value or Default(F).</returns>
+    /// <returns>
+    ///   The failure value, if the result is a failure, otherwise, a default value of <typeparamref name="F"/>.
+    /// </returns>
     function FailureOrDefault: F; overload; inline;
 
     /// <summary>
-    /// Returns the failure value or a provided default value if in success state.
+    ///   Gets the failure value or a default value provided, if the result is a failure
+    ///   (<paramref name="rtFailure"/>).
     /// </summary>
-    /// <param name="ADefault">The default value to return in case of success.</param>
-    /// <returns>The failure value or ADefault.</returns>
+    /// <param name="ADefault">
+    ///   The default value to be returned if the result is a failure.
+    /// </param>
+    /// <returns>
+    ///   The failure value, if the result is a failure, otherwise, the default value provided.
+    /// </returns>
     function FailureOrDefault(const ADefault: F): F; overload; inline;
 
     /// <summary>
-    /// Checks if the TResultPair is in the success state.
+    ///   Determines whether the result is a success (<paramref name="rtSuccess"/>).
     /// </summary>
-    /// <returns>True if the state is rtSuccess, False otherwise.</returns>
-    function IsSuccess: Boolean; inline;
+    /// <returns>
+    ///   <c>True</c> if the result is a success, otherwise <c>False</c>.
+    /// </returns>
+    function isSuccess: Boolean; inline;
 
     /// <summary>
-    /// Checks if the TResultPair is in the failure state.
+    ///   Determines whether the result is a failure (<paramref name="rtFailure"/>).
     /// </summary>
-    /// <returns>True if the state is rtFailure, False otherwise.</returns>
-    function IsFailure: Boolean; inline;
+    /// <returns>
+    ///   <c>True</c> if the result is a failure, otherwise <c>False</c>.
+    /// </returns>
+    function isFailure: Boolean; inline;
 
     /// <summary>
-    /// Retrieves the success value, if present.
+    ///   Gets the success value contained in the result, throwing an exception if it is a failure result.
     /// </summary>
-    /// <returns>The success value of type S.</returns>
-    /// <exception cref="Exception">Raised if the state is not rtSuccess.</exception>
+    /// <returns>
+    ///   The success value, if the result is a success.
+    /// </returns>
+    /// <exception cref="EInvalidOperation">
+    ///   Thrown if the result is a failure.
+    /// </exception>
     function ValueSuccess: S; inline;
 
     /// <summary>
-    /// Retrieves the failure value, if present.
+    ///   Gets the failure value contained in the result, throwing an exception if it is a success result.
     /// </summary>
-    /// <returns>The failure value of type F.</returns>
-    /// <exception cref="Exception">Raised if the state is not rtFailure.</exception>
+    /// <returns>
+    ///   The failure value, if the result is a failure.
+    /// </returns>
+    /// <exception cref="EInvalidOperation">
+    ///   Thrown if the result is a success.
+    /// </exception>
     function ValueFailure: F; inline;
+
+    /// <summary>
+    ///   Executes a custom function specified by AFunc. The result of this function determines whether
+    ///   the workflow continues down the success or failure path.
+    /// </summary>
+    /// <param name="AFunc">
+    ///   A custom function that receives the current TResultPair<S, F> instance and returns a new
+    ///   TResultPair<S, F>.
+    /// </param>
+    /// <returns>
+    ///   The TResultPair<S, F> instance after executing the custom function.
+    /// </returns>
+    function Exec(const AFunc: TFuncExec): TResultPair<S, F>; inline;
+
+    /// <summary>
+    ///   Marks the current step as successful and provides a value ASuccess to carry forward in the
+    ///   success path.
+    /// </summary>
+    /// <param name="ASuccess">
+    ///   The value representing the successful outcome of the current step.
+    /// </param>
+    /// <returns>
+    ///   The TResultPair<S, F> instance after marking the step as successful.
+    /// </returns>
+    function Ok(const ASuccessProc: TProc<S>): TResultPair<S, F>; inline;
+
+    /// <summary>
+    ///   Marks the current step as a failure and provides a value AFailure to carry forward in the
+    ///   failure path.
+    /// </summary>
+    /// <param name="AFailure">
+    ///   The value representing the failure outcome of the current step.
+    /// </param>
+    /// <returns>
+    ///   The TResultPair<S, F> instance after marking the step as a failure.
+    /// </returns>
+    function Fail(const AFailureProc: TProc<F>): TResultPair<S, F>; inline;
+
+    /// <summary>
+    ///   Specifies a custom function AFunc to execute if the previous step was successful. It continues
+    ///   the success path.
+    /// </summary>
+    /// <param name="AFunc">
+    ///   A custom function that processes the successful outcome and returns a new TResultPair<S, F>.
+    /// </param>
+    /// <returns>
+    ///   The TResultPair<S, F> instance after executing the custom function.
+    /// </returns>
+    function ThenOf(const AFunc: TFuncOk): TResultPair<S, F>; inline;
+
+    /// <summary>
+    ///   Specifies a custom function AFunc to execute if the previous step resulted in failure. It
+    ///   continues the failure path.
+    /// </summary>
+    /// <param name="AFunc">
+    ///   A custom function that processes the failure outcome and returns a new TResultPair<S, F>.
+    /// </param>
+    /// <returns>
+    ///   The TResultPair<S, F> instance after executing the custom function.
+    /// </returns>
+    function ExceptOf(const AFunc: TFuncFail): TResultPair<S, F>; inline;
+
+    /// <summary>
+    ///   Returns the current TResultPair<S, F> instance, allowing you to retrieve the final result of
+    ///   the Railway Pattern workflow.
+    /// </summary>
+    /// <returns>
+    ///   The current TResultPair<S, F> instance.
+    /// </returns>
+    function Return: TResultPair<S, F>; inline;
   end;
 
 implementation
 
-{ TResultPair<S, F> }
+{ TResultPairBr<S, F> }
+
+procedure TResultPair<S, F>._DestroySuccess;
+var
+  LTypeInfo: PTypeInfo;
+  LObject: TValue;
+begin
+  if @FSuccess = nil then
+    Exit;
+  LTypeInfo := TypeInfo(S);
+  if LTypeInfo.Kind = tkClass then
+  begin
+    LObject := TValue.From<S>(FSuccess.GetValue);
+    LObject.AsObject.Free;
+  end;
+end;
 
 procedure TResultPair<S, F>._SetFailureValue(const AFailure: F);
 begin
@@ -360,37 +590,123 @@ begin
   FResultType := AResultType;
 end;
 
-class function TResultPair<S, F>.Failure(const AFailure: F): TResultPair<S, F>;
+procedure TResultPair<S, F>.Dispose;
 begin
-  Result := TResultPair<S, F>.Create(TResultType.rtFailure);
-  Result._SetFailureValue(AFailure);
+  _DestroySuccess;
+  _DestroyFailure;
 end;
 
-class function TResultPair<S, F>.Success(const ASuccess: S): TResultPair<S, F>;
+procedure TResultPair<S, F>._DestroyFailure;
+var
+  LTypeInfo: PTypeInfo;
+  LObject: TValue;
 begin
-  Result := TResultPair<S, F>.Create(TResultType.rtSuccess);
-  Result._SetSuccessValue(ASuccess);
+  if @FFailure = nil then
+    Exit;
+  LTypeInfo := TypeInfo(F);
+  if LTypeInfo.Kind = tkClass then
+  begin
+    LObject := TValue.From<F>(FFailure.GetValue);
+    LObject.AsObject.Free;
+  end;
 end;
 
-function TResultPair<S, F>.IsFailure: Boolean;
+function TResultPair<S, F>.Fail(const AFailureProc: TProc<F>): TResultPair<S, F>;
+begin
+  Result := Self;
+  if not Assigned(AFailureProc) then
+    Exit;
+  case FResultType of
+    TResultType.rtFailure: AFailureProc(FFailure.GetValue);
+  end;
+end;
+
+function TResultPair<S, F>.Failure(const AFailure: F): TResultPair<S, F>;
+begin
+  _SetFailureValue(AFailure);
+  Result := Self;
+end;
+
+function TResultPair<S, F>.Return: TResultPair<S, F>;
+begin
+  if Self.FResultType in [TResultType.rtSuccess] then
+    Result := _ReturnSuccess
+  else
+  if Self.FResultType in [TResultType.rtFailure] then
+    Result := _ReturnFailure;
+end;
+
+function TResultPair<S, F>._ReturnFailure: TResultPair<S, F>;
+var
+  LFor: Integer;
+  LResult: TResultPair<S, F>;
+begin
+  Result := Self;
+  for LFor := Low(FFailureFuncs) to High(FFailureFuncs) do
+  begin
+    LResult := FFailureFuncs[LFor](FFailure.GetValue);
+    try
+      if LResult.isSuccess then
+        _SetSuccessValue(LResult.ValueSuccess)
+      else
+      if LResult.isFailure then
+        _SetFailureValue(LResult.ValueFailure);
+    finally
+      LResult.Dispose;
+    end;
+  end;
+end;
+
+function TResultPair<S, F>._ReturnSuccess: TResultPair<S, F>;
+var
+  LFor: Integer;
+  LResult: TResultPair<S, F>;
+begin
+  Result := Self;
+  for LFor := Low(FSuccessFuncs) to High(FSuccessFuncs) do
+  begin
+    LResult := FSuccessFuncs[LFor](Result.FSuccess.GetValue);
+    try
+      if LResult.isSuccess then
+        _SetSuccessValue(LResult.ValueSuccess)
+      else
+      if LResult.isFailure then
+        _SetFailureValue(LResult.ValueFailure);
+    finally
+      LResult.Dispose;
+    end;
+  end;
+end;
+
+function TResultPair<S, F>.Success(const ASuccess: S): TResultPair<S, F>;
+begin
+  _SetSuccessValue(ASuccess);
+  Result := Self;
+end;
+
+function TResultPair<S, F>.isFailure: Boolean;
 begin
   Result := FResultType = TResultType.rtFailure;
 end;
 
-function TResultPair<S, F>.IsSuccess: Boolean;
+function TResultPair<S, F>.isSuccess: Boolean;
 begin
   Result := FResultType = TResultType.rtSuccess;
 end;
 
-function TResultPair<S, F>.When(const ASuccessProc: TProc<S>;
-  const AFailureProc: TProc<F>): TResultPair<S, F>;
+function TResultPair<S, F>.Map<R>(const ASuccessFunc: TFunc<S, R>): TResultPair<S, F>;
+var
+  LCast: TValue;
 begin
   Result := Self;
-  if (not Assigned(ASuccesspROC)) and (not Assigned(AFailurepROC)) then
+  if not Assigned(ASuccessFunc) then
     Exit;
   case FResultType of
-    TResultType.rtSuccess: ASuccessProc(FSuccess.GetValue);
-    TResultType.rtFailure: AFailureProc(FFailure.GetValue);
+    TResultType.rtSuccess:
+    begin
+      LCast := TValue.From<R>(ASuccessFunc(FSuccess.GetValue));
+      _SetSuccessValue(LCast.AsType<S>);
+    end;
   end;
 end;
 
@@ -406,6 +722,18 @@ begin
   end;
 end;
 
+function TResultPair<S, F>.When(const ASuccessProc: TProc<S>;
+  const AFailureProc: TProc<F>): TResultPair<S, F>;
+begin
+  Result := Self;
+  if (not Assigned(ASuccessProc)) and (not Assigned(AFailureProc)) then
+    Exit;
+  case FResultType of
+    TResultType.rtSuccess: ASuccessProc(FSuccess.GetValue);
+    TResultType.rtFailure: AFailureProc(FFailure.GetValue);
+  end;
+end;
+
 function TResultPair<S, F>.Reduce<R>(const AFunc: TFunc<S, F, R>): R;
 begin
   Result := Default(R);
@@ -417,6 +745,28 @@ begin
   end;
 end;
 
+function TResultPair<S, F>.ThenOf(const AFunc: TFuncOk): TResultPair<S, F>;
+begin
+  Result := Self;
+  if (FResultType in [TResultType.rtSuccess]) and Assigned(AFunc) then
+  begin
+    SetLength(Result.FSuccessFuncs, Length(FSuccessFuncs) + 1);
+    Result.FSuccessFuncs[Length(Result.FSuccessFuncs) - 1] := AFunc;
+  end;
+end;
+
+//function TResultPair<S, F>.TryException(const ASuccessProc: TProc<S>;
+//  const AFailureProc: TProc<F>): TResultPair<S, F>;
+//begin
+//  Result := Self;
+//  if (not Assigned(ASuccessProc)) and (not Assigned(AFailureProc)) then
+//    Exit;
+//  case FResultType of
+//    TResultType.rtSuccess: ASuccessProc(FSuccess.GetValue);
+//    TResultType.rtFailure: AFailureProc(FFailure.GetValue);
+//  end;
+//end;
+
 function TResultPair<S, F>.SuccessOrException: S;
 begin
   if FResultType = TResultType.rtFailure then
@@ -425,25 +775,25 @@ begin
 end;
 
 class operator TResultPair<S, F>.Implicit(
-  const V: IResultPairValue<F>): TResultPair<S, F>;
+  const V: TResultPairValue<F>): TResultPair<S, F>;
 begin
   Result.FFailure := V;
 end;
 
 class operator TResultPair<S, F>.Implicit(
-  const V: TResultPair<S, F>): IResultPairValue<F>;
+  const V: TResultPair<S, F>): TResultPairValue<F>;
 begin
   Result := V.FFailure;
 end;
 
 class operator TResultPair<S, F>.Implicit(
-  const V: IResultPairValue<S>): TResultPair<S, F>;
+  const V: TResultPairValue<S>): TResultPair<S, F>;
 begin
   Result.FSuccess := V;
 end;
 
 class operator TResultPair<S, F>.Implicit(
-  const V: TResultPair<S, F>): IResultPairValue<S>;
+  const V: TResultPair<S, F>): TResultPairValue<S>;
 begin
   Result := V.FSuccess;
 end;
@@ -458,23 +808,8 @@ begin
   Result := FSuccess.GetValue;
 end;
 
-function TResultPair<S, F>.Map<R>(const ASuccessFunc: TFunc<S, R>): TResultPair<S, F>;
-var
-  LCast: TValue;
-begin
-  Result := Self;
-  if not Assigned(ASuccessFunc) then
-    Exit;
-  case FResultType of
-    TResultType.rtSuccess:
-    begin
-      LCast := TValue.From<R>(ASuccessFunc(FSuccess.GetValue));
-      Result._SetSuccessValue(LCast.AsType<S>);
-    end;
-  end;
-end;
-
-function TResultPair<S, F>.Map<R>(const AFailureFunc: TFunc<F, R>): TResultPair<S, F>;
+function TResultPair<S, F>.Map<R>(
+  const AFailureFunc: TFunc<F, R>): TResultPair<S, F>;
 var
   LCast: TValue;
 begin
@@ -485,15 +820,30 @@ begin
     TResultType.rtFailure:
     begin
       LCast := TValue.From<R>(AFailureFunc(FFailure.GetValue));
-      Result._SetFailureValue(LCast.AsType<F>);
+      _SetFailureValue(LCast.AsType<F>);
     end;
   end;
+end;
+
+class function TResultPair<S, F>.New: TResultPair<S, F>;
+begin
+  Result := TResultPair<S, F>.Create(TResultType.rtNone);
 end;
 
 class operator TResultPair<S, F>.NotEqual(const Left,
   Right: TResultPair<S, F>): Boolean;
 begin
   Result := not (Left = Right);
+end;
+
+function TResultPair<S, F>.Ok(const ASuccessProc: TProc<S>): TResultPair<S, F>;
+begin
+  Result := Self;
+  if not Assigned(ASuccessProc) then
+    Exit;
+  case FResultType of
+    TResultType.rtSuccess: ASuccessProc(FSuccess.GetValue);
+  end;
 end;
 
 function TResultPair<S, F>.FlatMap<R>(
@@ -508,7 +858,7 @@ begin
     TResultType.rtSuccess:
     begin
       LCast := TValue.From<R>(ASuccessFunc(FSuccess.GetValue));
-      Result._SetSuccessValue(LCast.AsType<S>);
+      _SetSuccessValue(LCast.AsType<S>);
     end;
     TResultType.rtFailure: _SetFailureValue(FFailure.GetValue);
   end;
@@ -526,9 +876,21 @@ begin
     TResultType.rtFailure:
     begin
       LCast := TValue.From<R>(AFailureFunc(FFailure.GetValue));
-      Result._SetFailureValue(LCast.AsType<F>);
+      _SetFailureValue(LCast.AsType<F>);
     end;
   end;
+end;
+
+function TResultPair<S, F>.Pure(const ASuccess: S): TResultPair<S, F>;
+begin
+  _SetSuccessValue(ASuccess);
+  Result := Self;
+end;
+
+function TResultPair<S, F>.Pure(const AFailure: F): TResultPair<S, F>;
+begin
+  _SetFailureValue(AFailure);
+  Result := Self;
 end;
 
 function TResultPair<S, F>.SuccessOrElse(const ASuccessFunc: TFunc<S, S>): S;
@@ -567,6 +929,30 @@ begin
   Result := (Left = Right);
 end;
 
+function TResultPair<S, F>.ExceptOf(const AFunc: TFuncFail): TResultPair<S, F>;
+begin
+  Result := Self;
+  if (FResultType in [TResultType.rtFailure]) and Assigned(AFunc) then
+  begin
+    SetLength(Result.FFailureFuncs, Length(FFailureFuncs) + 1);
+    Result.FFailureFuncs[Length(Result.FFailureFuncs) - 1] := AFunc;
+  end;
+end;
+
+function TResultPair<S, F>.Exec(const AFunc: TFuncExec): TResultPair<S, F>;
+var
+  LResult: TResultPair<S, F>;
+begin
+  if not Assigned(AFunc) then
+    Exit;
+  LResult := AFunc();
+  if LResult.isSuccess then
+    Result.Success(LResult.FSuccess.GetValue)
+  else
+  if LResult.isFailure then
+    Result.Failure(LResult.FFailure.GetValue);
+end;
+
 function TResultPair<S, F>.FailureOrDefault: F;
 begin
   case FResultType of
@@ -600,32 +986,80 @@ end;
 function TResultPair<S, F>.FailureOrException: F;
 begin
   if FResultType = TResultType.rtSuccess then
-    raise ESuccessException<S>.Create(FSuccess.GetValue);
+    raise ESuccessException<F>.Create(FFailure.GetValue);
   Result := FFailure.GetValue;
+end;
+
+function TResultPair<S, F>.Swap: TResultPair<F, S>;
+var
+  LResult: TResultPair<F, S>;
+begin
+  LResult := TResultPair<F, S>.New;
+  try
+    case FResultType of
+      TResultType.rtSuccess:
+      begin
+        LResult.FFailure := TResultPairValue<S>.Create(FSuccess.GetValue);
+        LResult.FResultType := TResultType.rtFailure;
+      end;
+      TResultType.rtFailure:
+      begin
+        LResult.FSuccess := TResultPairValue<F>.Create(FFailure.GetValue);
+        LResult.FResultType := TResultType.rtSuccess;
+      end;
+    end;
+  except
+    on E: Exception do
+      raise ETypeIncompatibility.Create('[Success/Failure]');
+  end;
+  Result := LResult;
+end;
+
+function TResultPair<S, F>.Recover<R>(const AFailureFunc: TFunc<F, R>): TResultPair<R, S>;
+var
+  LCast: TValue;
+  LResult: TResultPair<R, S>;
+begin
+  LResult := TResultPair<R, S>.New;
+  if not Assigned(AFailureFunc) then
+    Exit;
+  case FResultType of
+    TResultType.rtFailure:
+    begin
+      LCast := TValue.From<R>(AFailureFunc(FFailure.GetValue));
+      LResult.FSuccess := TResultPairValue<R>.Create(LCast.AsType<R>);
+      LResult.FResultType := TResultType.rtSuccess;
+    end;
+  end;
+  Result := LResult;
 end;
 
 { TResultPairValue<T> }
 
 constructor TResultPairValue<T>.Create(AValue: T);
 begin
-  inherited Create;
   FValue := AValue;
-  FIsObject := PTypeInfo(TypeInfo(T))^.Kind = tkClass;
+  FHasValue := True;
 end;
 
-destructor TResultPairValue<T>.Destroy;
+class function TResultPairValue<T>.CreateNil: TResultPairValue<T>;
 begin
-  if (FIsObject) and (Assigned(Pointer(@FValue))) then
-    TObject(Pointer(@FValue)^).Free;
-  inherited;
+  Result.FHasValue := False;
 end;
 
 function TResultPairValue<T>.GetValue: T;
 begin
+  if not FHasValue then
+    raise Exception.Create('Value is nil.');
   Result := FValue;
 end;
 
-{ EFailureException<F> }
+function TResultPairValue<T>.HasValue: Boolean;
+begin
+  Result := FHasValue;
+end;
+
+{ EFailureException<S> }
 
 constructor EFailureException<F>.Create(const AValue: F);
 begin
@@ -647,3 +1081,5 @@ begin
 end;
 
 end.
+
+

@@ -1,11 +1,11 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<test-results name="D:\Ecossistema-Delphi\ModernSyntax\Test Delphi\EclbrResultPair\PTestResultPair.exe" total="18" errors="0" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-03-03" time="2.649">
+<test-results name="D:\Ecossistema-Delphi\ModernSyntax\Test Delphi\EclbrResultPair\PTestResultPair.exe" total="20" errors="1" failures="0" ignored="0" inconclusive="0" not-run="0" skipped="0" invalid="0" date="2026-03-05" time="12.382">
   <culture-info current-culture="en" current-uiculture="en" />
-  <test-suite type="Assembly" name="PTestResultPair.exe" executed="true" result="Success" success="True" time="2.649" asserts="0">
+  <test-suite type="Assembly" name="PTestResultPair.exe" executed="true" result="Failure" success="False" time="12.382" asserts="0">
     <results>
-        <test-suite type="Namespace" name="UTestMS" executed="true" result="Success" success="True" time="2.649" asserts="0" >
+        <test-suite type="Namespace" name="UTestMS" executed="true" result="Success" success="True" time="12.382" asserts="0" >
           <results>
-              <test-suite type="Fixture" name="TTestTResultPair" executed="True" result="Success" success="True" time="2.649" >
+              <test-suite type="Fixture" name="TTestTResultPair" executed="True" result="Success" success="True" time="12.382" >
                 <results>
                   <test-case name="TestMap" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                   <test-case name="TestMapTryException" executed="True" result="Success" success="True" time="0.000" asserts="0" />
@@ -17,14 +17,25 @@
                   <test-case name="TestReduceSuccess" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                   <test-case name="TestReduceFailure" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                   <test-case name="TestGetSuccessOrElse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
-                  <test-case name="TestGetSuccessOrException" executed="True" result="Success" success="True" time="1.896" asserts="0" />
+                  <test-case name="TestGetSuccessOrException" executed="True" result="Success" success="True" time="1.394" asserts="0" />
                   <test-case name="TestGetSuccessOrDefaultNoDefault" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                   <test-case name="TestGetSuccessOrDefaultWithDefault" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                   <test-case name="TestGetFailureOrElse" executed="True" result="Success" success="True" time="0.000" asserts="0" />
-                  <test-case name="TestGetFailureOrException" executed="True" result="Success" success="True" time="0.743" asserts="0" />
+                  <test-case name="TestGetFailureOrException" executed="True" result="Success" success="True" time="0.819" asserts="0" />
                   <test-case name="TestGetFailureOrDefaultNoDefault" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                   <test-case name="TestGetFailureOrDefaultWithDefault" executed="True" result="Success" success="True" time="0.000" asserts="0" />
                   <test-case name="TestObjectCleanup" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestValueSuccessNil" executed="True" result="Success" success="True" time="0.000" asserts="0" />
+                  <test-case name="TestValueSuccessNilSetFailure" executed="True" result="Error" success="False" time="10.149" asserts="0" >
+                    <failure>
+                      <message>
+                        <![CDATA[ Access violation at address 00EE2326 in module 'PTestResultPair.exe' (offset 262326). Read of address 00000000 ]]>
+                      </message>
+                      <stack-trace>
+                        <![CDATA[  ]]>
+                      </stack-trace>
+                    </failure>
+                  </test-case>
                 </results>
               </test-suite>
           </results>

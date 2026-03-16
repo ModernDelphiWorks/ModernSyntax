@@ -29,14 +29,14 @@ uses
 type
   TArrayValue = array of TValue;
 
-  IEvolutoinObject = interface
+  IModernObject = interface
     ['{486D1BA3-6AEE-46A6-A845-D5154BEBE31C}']
     function Factory(const AClass: TClass): TObject; overload;
     function Factory(const AClass: TClass; const AArgs: TArrayValue;
       const AMethodName: String): TObject; overload;
   end;
 
-  TEvolutionObject = class sealed(TInterfacedObject, IEvolutoinObject)
+  TModernObject = class sealed(TInterfacedObject, IModernObject)
   strict private
     class var FContext: TRttiContext;
     class var FAutoRefLock: TCriticalSection;
@@ -48,7 +48,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    class function New: IEvolutoinObject;
+    class function New: IModernObject;
     function Factory(const AClass: TClass): TObject; overload;
     function Factory(const AClass: TClass; const AArgs: TArrayValue;
       const AMethodName: String): TObject; overload;
@@ -82,7 +82,7 @@ type
     FValue: T;
     FSmartPtr: ISmartPtr<T>;
     FAutoRefLock: IAutoRefLock;
-    FObjectEx: IEvolutoinObject;
+    FObjectEx: IModernObject;
     function _GetAsRef: T;
   strict private
     type
@@ -125,7 +125,7 @@ type
     FValue: TValue;
     FSmartPtr: ISmartPtr<T>;
     FAutoRefLock: IAutoRefLock;
-    FObjectEx: IEvolutoinObject;
+    FObjectEx: IModernObject;
     FIsMutable: Boolean;
     function _GetAsRef: T;
   strict private
@@ -168,49 +168,49 @@ end;
 
 { TObjectEx }
 
-class function TEvolutionObject.AutoRefLock: TCriticalSection;
+class function TModernObject.AutoRefLock: TCriticalSection;
 begin
   Result := FAutoRefLock;
 end;
 
-class function TEvolutionObject.Context: TRttiContext;
+class function TModernObject.Context: TRttiContext;
 begin
   Result := FContext;
 end;
 
-constructor TEvolutionObject.Create;
+constructor TModernObject.Create;
 begin
 
 end;
 
-destructor TEvolutionObject.Destroy;
+destructor TModernObject.Destroy;
 begin
   inherited;
 end;
 
-class procedure TEvolutionObject.InitializeContext;
+class procedure TModernObject.InitializeContext;
 begin
   FContext := TRttiContext.Create;
   FAutoRefLock := TCriticalSection.Create;
 end;
 
-class procedure TEvolutionObject.FinalizeContext;
+class procedure TModernObject.FinalizeContext;
 begin
   FAutoRefLock.Free;
   FContext.Free;
 end;
 
-class function TEvolutionObject.New: IEvolutoinObject;
+class function TModernObject.New: IModernObject;
 begin
-  Result := TEvolutionObject.Create;
+  Result := TModernObject.Create;
 end;
 
-function TEvolutionObject.Factory(const AClass: TClass): TObject;
+function TModernObject.Factory(const AClass: TClass): TObject;
 begin
   Result := Factory(AClass, [], 'Create');
 end;
 
-function TEvolutionObject.Factory(const AClass: TClass; const AArgs: TArrayValue;
+function TModernObject.Factory(const AClass: TClass; const AArgs: TArrayValue;
   const AMethodName: String): TObject;
 var
   LConstructor: TRttiMethod;
@@ -230,7 +230,7 @@ begin
   end;
 end;
 
-function TEvolutionObject.Factory<T>: T;
+function TModernObject.Factory<T>: T;
 var
   LType: TRttiType;
   LInstance: TValue;
@@ -272,7 +272,7 @@ begin
   FValue := AObjectRef;
   if Assigned(FValue) then
     FSmartPtr := TSmartPtr.Create(FValue);
-  FObjectEx := TEvolutionObject.New;
+  FObjectEx := TModernObject.New;
   FAutoRefLock := TAutoRefLock.Create;
 end;
 
@@ -280,12 +280,12 @@ function TSmartPtr<T>._GetAsRef: T;
 begin
   if not Assigned(FAutoRefLock) then
   begin
-    TEvolutionObject.AutoRefLock.Acquire;
+    TModernObject.AutoRefLock.Acquire;
     try
       if not Assigned(FAutoRefLock) then
         FAutoRefLock := TAutoRefLock.Create;
     finally
-      TEvolutionObject.AutoRefLock.Release;
+      TModernObject.AutoRefLock.Release;
     end;
   end;
 
@@ -294,7 +294,7 @@ begin
     if (FSmartPtr = nil) or FSmartPtr.IsNull then
     begin
       if FObjectEx = nil then
-        FObjectEx := TEvolutionObject.New;
+        FObjectEx := TModernObject.New;
       FValue := FObjectEx.Factory(T) as T;
       FSmartPtr := TSmartPtr.Create(FValue);
     end;
@@ -374,7 +374,7 @@ begin
   FIsMutable := AMutable;
   FValue := TValue.From<T>(AValueRef);
   FSmartPtr := TSmartPtr.Create(FValue);
-  FObjectEx := TEvolutionObject.New;
+  FObjectEx := TModernObject.New;
   FAutoRefLock := TAutoRefLock.Create;
 end;
 
@@ -435,12 +435,12 @@ var
 begin
   if not Assigned(FAutoRefLock) then
   begin
-    TEvolutionObject.AutoRefLock.Acquire;
+    TModernObject.AutoRefLock.Acquire;
     try
       if not Assigned(FAutoRefLock) then
         FAutoRefLock := TAutoRefLock.Create;
     finally
-      TEvolutionObject.AutoRefLock.Release;
+      TModernObject.AutoRefLock.Release;
     end;
   end;
 
@@ -451,8 +451,8 @@ begin
       if FValue.IsEmpty then
       begin
         if FObjectEx = nil then
-          FObjectEx := TEvolutionObject.New;
-        LType := TEvolutionObject.Context.GetType(TypeInfo(T));
+          FObjectEx := TModernObject.New;
+        LType := TModernObject.Context.GetType(TypeInfo(T));
         if LType.IsInstance then
         begin
           FValue := FObjectEx.Factory(LType.AsInstance.MetaclassType);
@@ -596,9 +596,9 @@ end;
 //end;
 
 initialization
-  TEvolutionObject.InitializeContext;
+  TModernObject.InitializeContext;
 
 finalization
-  TEvolutionObject.FinalizeContext;
+  TModernObject.FinalizeContext;
 
 end.
