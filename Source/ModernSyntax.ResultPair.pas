@@ -1,27 +1,14 @@
 {
-               ECL Brasil - Essential Core Library for Delphi
+  ------------------------------------------------------------------------------
+  ModernSyntax
+  Bringing modern language syntax and paradigms to Delphi through classes and methods.
 
-                   Copyright (c) 2023, Isaque Pinheiro
-                          All rights reserved.
+  SPDX-License-Identifier: Apache-2.0
+  Copyright (c) 2025-2026 Isaque Pinheiro
 
-                    GNU Lesser General Public License
-                      Versão 3, 29 de junho de 2007
-
-       Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/>
-       A todos é permitido copiar e distribuir cópias deste documento de
-       licença, mas mudá-lo não é permitido.
-
-       Esta versão da GNU Lesser General Public License incorpora
-       os termos e condições da versão 3 da GNU General Public License
-       Licença, complementado pelas permissões adicionais listadas no
-       arquivo LICENSE na pasta principal.
-}
-
-{
-  @abstract(ECLBr Library)
-  @created(23 Abr 2023)
-  @author(Isaque Pinheiro <isaquepsp@gmail.com>)
-  @Discord(https://discord.gg/T2zJC8zX)
+  Licensed under the Apache License, Version 2.0.
+  See the LICENSE file in the project root for full license information.
+  ------------------------------------------------------------------------------
 }
 
 unit ModernSyntax.ResultPair;
@@ -47,7 +34,13 @@ type
   end;
   ETypeIncompatibility = class(Exception)
   public
-    constructor Create(const AMessage: String = '');
+    constructor Create(const AMessage: string = '');
+  end;
+
+  TResultValue = record
+    Success: TValue;
+    Failure: TValue;
+    constructor Create(const ASuccess: TValue; const AFailure: TValue);
   end;
 
   TResultPairValue<T> = record
@@ -282,7 +275,7 @@ type
     ///   A new result with the success part mapped or converted to failure based on the result
     ///   of the mapping function applied.
     /// </returns>
-    function FlatMap<R>(const ASuccessFunc: TFunc<S, R>): TResultPair<S, F>; overload; inline;
+    function FlatMap(const ASuccessFunc: TFunc<S, TResultValue>): TResultPair<S, F>; overload; //inline;
 
     /// <summary>
     ///   Applies a mapping function that operates on the failure part of the result, producing
@@ -299,7 +292,7 @@ type
     ///   A new result with the failure part mapped or converted to success based on the result
     ///   of the mapping function applied.
     /// </returns>
-    function FlatMap<R>(const AFailureFunc: TFunc<F, R>): TResultPair<S, F>; overload; inline;
+    function FlatMap(const AFailureFunc: TFunc<F, TResultValue>): TResultPair<S, F>; overload; //inline;
 
     /// <summary>
     ///   Creates an instance of a success result containing the specified value.
@@ -694,9 +687,26 @@ begin
   Result := FResultType = TResultType.rtSuccess;
 end;
 
+function TResultPair<S, F>.Map<R>(
+  const AFailureFunc: TFunc<F, R>): TResultPair<S, F>;
+var
+  LResult: TResultValue;
+begin
+  Result := Self;
+  if not Assigned(AFailureFunc) then
+    Exit;
+  case FResultType of
+    TResultType.rtFailure:
+    begin
+      LResult.Failure := TValue.From<R>(AFailureFunc(FFailure.GetValue));
+      _SetFailureValue(LResult.Failure.AsType<F>);
+    end;
+  end;
+end;
+
 function TResultPair<S, F>.Map<R>(const ASuccessFunc: TFunc<S, R>): TResultPair<S, F>;
 var
-  LCast: TValue;
+  LResult: TResultValue;
 begin
   Result := Self;
   if not Assigned(ASuccessFunc) then
@@ -704,8 +714,8 @@ begin
   case FResultType of
     TResultType.rtSuccess:
     begin
-      LCast := TValue.From<R>(ASuccessFunc(FSuccess.GetValue));
-      _SetSuccessValue(LCast.AsType<S>);
+      LResult.Success := TValue.From<R>(ASuccessFunc(FSuccess.GetValue));
+      _SetSuccessValue(LResult.Success.AsType<S>);
     end;
   end;
 end;
@@ -808,23 +818,6 @@ begin
   Result := FSuccess.GetValue;
 end;
 
-function TResultPair<S, F>.Map<R>(
-  const AFailureFunc: TFunc<F, R>): TResultPair<S, F>;
-var
-  LCast: TValue;
-begin
-  Result := Self;
-  if not Assigned(AFailureFunc) then
-    Exit;
-  case FResultType of
-    TResultType.rtFailure:
-    begin
-      LCast := TValue.From<R>(AFailureFunc(FFailure.GetValue));
-      _SetFailureValue(LCast.AsType<F>);
-    end;
-  end;
-end;
-
 class function TResultPair<S, F>.New: TResultPair<S, F>;
 begin
   Result := TResultPair<S, F>.Create(TResultType.rtNone);
@@ -846,39 +839,36 @@ begin
   end;
 end;
 
-function TResultPair<S, F>.FlatMap<R>(
-  const ASuccessFunc: TFunc<S, R>): TResultPair<S, F>;
+function TResultPair<S, F>.FlatMap(
+  const ASuccessFunc: TFunc<S, TResultValue>): TResultPair<S, F>;
 var
-  LCast: TValue;
+  LResult: TResultValue;
 begin
   Result := Self;
   if not Assigned(ASuccessFunc) then
     Exit;
-  case FResultType of
-    TResultType.rtSuccess:
-    begin
-      LCast := TValue.From<R>(ASuccessFunc(FSuccess.GetValue));
-      _SetSuccessValue(LCast.AsType<S>);
-    end;
-    TResultType.rtFailure: _SetFailureValue(FFailure.GetValue);
-  end;
+  LResult := ASuccessFunc(FSuccess.GetValue);
+  if not LResult.Success.IsEmpty then
+    _SetSuccessValue(LResult.Success.AsType<S>);
+
+  if not LResult.Failure.IsEmpty then
+    _SetFailureValue(LResult.Failure.AsType<F>);
 end;
 
-function TResultPair<S, F>.FlatMap<R>(
-  const AFailureFunc: TFunc<F, R>): TResultPair<S, F>;
+function TResultPair<S, F>.FlatMap(
+  const AFailureFunc: TFunc<F, TResultValue>): TResultPair<S, F>;
 var
-  LCast: TValue;
+  LResult: TResultValue;
 begin
   Result := Self;
   if not Assigned(AFailureFunc) then
-    exit;
-  case FResultType of
-    TResultType.rtFailure:
-    begin
-      LCast := TValue.From<R>(AFailureFunc(FFailure.GetValue));
-      _SetFailureValue(LCast.AsType<F>);
-    end;
-  end;
+    Exit;
+  LResult := AFailureFunc(FFailure.GetValue);
+  if not LResult.Success.IsEmpty then
+    _SetSuccessValue(LResult.Success.AsType<S>);
+
+  if not LResult.Failure.IsEmpty then
+    _SetFailureValue(LResult.Failure.AsType<F>);
 end;
 
 function TResultPair<S, F>.Pure(const ASuccess: S): TResultPair<S, F>;
@@ -1075,9 +1065,17 @@ end;
 
 { ETypeIncompatibility }
 
-constructor ETypeIncompatibility.Create(const AMessage: String);
+constructor ETypeIncompatibility.Create(const AMessage: string);
 begin
   inherited CreateFmt('Type incompatibility: %s', [AMessage]);
+end;
+
+{ TResult<S, F> }
+
+constructor TResultValue.Create(const ASuccess: TValue; const AFailure:TValue);
+begin
+  Success := ASuccess;
+  Failure := AFailure;
 end;
 
 end.
