@@ -1,4 +1,4 @@
-﻿{
+{
   ------------------------------------------------------------------------------
   ModernSyntax
   Bringing modern language syntax and paradigms to Delphi through classes and methods.
@@ -23,10 +23,10 @@ uses
   DateUtils,
   Threading,
   Generics.Collections,
-  Evolution.System;
+  ModernSyntax;
 
 type
-  TFuture = Evolution.System.TFuture;
+  TFuture = ModernSyntax.TFuture;
   IScheduler = interface;
 
   TFuncCoroutine = reference to function(const ASendValue: TValue; const AValue: TValue): TFuture;

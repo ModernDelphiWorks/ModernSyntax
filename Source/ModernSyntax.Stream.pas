@@ -1,4 +1,4 @@
-﻿{
+{
   ------------------------------------------------------------------------------
   ModernSyntax
   Bringing modern language syntax and paradigms to Delphi through classes and methods.
@@ -37,7 +37,7 @@ type
   ///   and reducing stream content. It also supports asynchronous operations and listener notifications for real-time monitoring.
   ///   Uses AutoRef for automatic resource management of internal streams.
   /// </remarks>
-  TEvolutionStreamReader = class
+  TModernStreamReader = class
   strict private
     FDataInternal: TSmartPtr<TStreamReader>;
     FDataString: TSmartPtr<TStringStream>;
@@ -60,7 +60,7 @@ type
     /// <param name="LOperation">The name of the operation being performed.</param>
     /// <param name="LProcessor">A procedure that processes the stream lines using a TStringBuilder.</param>
     /// <returns>The current instance for method chaining.</returns>
-    function _ProcessStream(const LOperation: String; const LProcessor: TProc<TStringBuilder>): TEvolutionStreamReader;
+    function _ProcessStream(const LOperation: String; const LProcessor: TProc<TStringBuilder>): TModernStreamReader;
 
     /// <summary>
     ///   Initializes or updates the internal string stream and reader from the current internal stream.
@@ -132,14 +132,14 @@ type
     /// </summary>
     /// <param name="Stream">The source stream to read from.</param>
     /// <returns>A new TStreamReaderEx instance.</returns>
-    class function New(const Stream: TStream): TEvolutionStreamReader; overload;
+    class function New(const Stream: TStream): TModernStreamReader; overload;
 
     /// <summary>
     ///   Creates a new TStreamReaderEx instance from a file.
     /// </summary>
     /// <param name="Filename">The path to the file to read from.</param>
     /// <returns>A new TStreamReaderEx instance.</returns>
-    class function New(const Filename: String): TEvolutionStreamReader; overload;
+    class function New(const Filename: String): TModernStreamReader; overload;
 
     /// <summary>
     ///   Gets the underlying base stream.
@@ -161,7 +161,7 @@ type
     /// </remarks>
     /// <param name="AFunc">A function that takes a string and returns a transformed string.</param>
     /// <returns>The current instance with transformed content.</returns>
-    function Map(const AFunc: TFunc<String, String>): TEvolutionStreamReader; overload;
+    function Map(const AFunc: TFunc<String, String>): TModernStreamReader; overload;
 
     /// <summary>
     ///   Maps each line in the stream to a result of type TResult.
@@ -178,7 +178,7 @@ type
     /// </summary>
     /// <param name="APredicate">A function that returns true for lines to keep.</param>
     /// <returns>The current instance with filtered content.</returns>
-    function Filter(const APredicate: TPredicate<String>): TEvolutionStreamReader;
+    function Filter(const APredicate: TPredicate<String>): TModernStreamReader;
 
     /// <summary>
     ///   Reduces the stream lines to a single integer value.
@@ -196,7 +196,7 @@ type
     /// </summary>
     /// <param name="AAction">A procedure to execute for each line.</param>
     /// <returns>The current instance for method chaining.</returns>
-    function ForEach(const AAction: TProc<String>): TEvolutionStreamReader;
+    function ForEach(const AAction: TProc<String>): TModernStreamReader;
 
     /// <summary>
     ///   Groups stream lines by a key selector function.
@@ -212,34 +212,34 @@ type
     ///   Removes duplicate lines from the stream.
     /// </summary>
     /// <returns>The current instance with unique lines.</returns>
-    function Distinct: TEvolutionStreamReader;
+    function Distinct: TModernStreamReader;
 
     /// <summary>
     ///   Skips a specified number of lines from the start of the stream.
     /// </summary>
     /// <param name="ACount">The number of lines to skip.</param>
     /// <returns>The current instance with remaining lines.</returns>
-    function Skip(const ACount: Integer): TEvolutionStreamReader;
+    function Skip(const ACount: Integer): TModernStreamReader;
 
     /// <summary>
     ///   Sorts the stream lines alphabetically.
     /// </summary>
     /// <returns>The current instance with sorted lines.</returns>
-    function Sort: TEvolutionStreamReader;
+    function Sort: TModernStreamReader;
 
     /// <summary>
     ///   Takes a specified number of lines from the start of the stream.
     /// </summary>
     /// <param name="ACount">The number of lines to take.</param>
     /// <returns>The current instance with selected lines.</returns>
-    function Take(const ACount: Integer): TEvolutionStreamReader;
+    function Take(const ACount: Integer): TModernStreamReader;
 
     /// <summary>
     ///   Concatenates the current stream with another TStreamReaderEx instance.
     /// </summary>
     /// <param name="AStreamReader">The TStreamReaderEx to concatenate with.</param>
     /// <returns>The current instance with combined content.</returns>
-    function Concat(const AStreamReader: TEvolutionStreamReader): TEvolutionStreamReader;
+    function Concat(const AStreamReader: TModernStreamReader): TModernStreamReader;
 
     /// <summary>
     ///   Partitions the stream into two based on a predicate.
@@ -249,7 +249,7 @@ type
     /// </remarks>
     /// <param name="APredicate">A function that returns true for lines to include in the left partition.</param>
     /// <returns>A TPair containing the two partitioned TStreamReaderEx instances.</returns>
-    function Partition(const APredicate: TPredicate<String>): TPair<TEvolutionStreamReader, TEvolutionStreamReader>;
+    function Partition(const APredicate: TPredicate<String>): TPair<TModernStreamReader, TModernStreamReader>;
 
     /// <summary>
     ///   Joins all stream lines into a single string with a separator.
@@ -290,7 +290,7 @@ type
     /// <param name="ACondition">A predicate to filter lines.</param>
     /// <param name="ATransform">A function to transform matching lines.</param>
     /// <returns>The current instance with filtered and transformed content.</returns>
-    function Comprehend(const ACondition: TPredicate<String>; const ATransform: TFunc<String, String>): TEvolutionStreamReader;
+    function Comprehend(const ACondition: TPredicate<String>; const ATransform: TFunc<String, String>): TModernStreamReader;
 
     /// <summary>
     ///   Adds a listener to receive notifications about stream operations.
@@ -307,78 +307,78 @@ type
 
 implementation
 
-{ TStreamReaderEx }
+{ TModernStreamReader }
 
-constructor TEvolutionStreamReader.Create;
+constructor TModernStreamReader.Create;
 begin
   inherited Create;
 end;
 
-constructor TEvolutionStreamReader.Create(const Stream: TStream);
+constructor TModernStreamReader.Create(const Stream: TStream);
 begin
   Create;
   FDataInternal := TStreamReader.Create(Stream);
 end;
 
-constructor TEvolutionStreamReader.Create(const Stream: TStream; const DetectBOM: Boolean);
+constructor TModernStreamReader.Create(const Stream: TStream; const DetectBOM: Boolean);
 begin
   Create;
   FDataInternal := TStreamReader.Create(Stream, DetectBOM);
 end;
 
-constructor TEvolutionStreamReader.Create(const Stream: TStream; const Encoding: TEncoding;
+constructor TModernStreamReader.Create(const Stream: TStream; const Encoding: TEncoding;
   const DetectBOM: Boolean; const BufferSize: Integer);
 begin
   Create;
   FDataInternal := TStreamReader.Create(Stream, Encoding, DetectBOM, BufferSize);
 end;
 
-constructor TEvolutionStreamReader.Create(const Filename: String);
+constructor TModernStreamReader.Create(const Filename: String);
 begin
   Create;
   FDataInternal := TStreamReader.Create(Filename);
 end;
 
-constructor TEvolutionStreamReader.Create(const Filename: String; const DetectBOM: Boolean);
+constructor TModernStreamReader.Create(const Filename: String; const DetectBOM: Boolean);
 begin
   Create;
   FDataInternal := TStreamReader.Create(Filename, DetectBOM);
 end;
 
-constructor TEvolutionStreamReader.Create(const Filename: String; const Encoding: TEncoding;
+constructor TModernStreamReader.Create(const Filename: String; const Encoding: TEncoding;
   const DetectBOM: Boolean; const BufferSize: Integer);
 begin
   Create;
   FDataInternal := TStreamReader.Create(Filename, Encoding, DetectBOM, BufferSize);
 end;
 
-destructor TEvolutionStreamReader.Destroy;
+destructor TModernStreamReader.Destroy;
 begin
   FListeners.Free;
   inherited;
 end;
 
-class function TEvolutionStreamReader.New(const Stream: TStream): TEvolutionStreamReader;
+class function TModernStreamReader.New(const Stream: TStream): TModernStreamReader;
 begin
-  Result := TEvolutionStreamReader.Create(Stream);
+  Result := TModernStreamReader.Create(Stream);
 end;
 
-class function TEvolutionStreamReader.New(const Filename: String): TEvolutionStreamReader;
+class function TModernStreamReader.New(const Filename: String): TModernStreamReader;
 begin
-  Result := TEvolutionStreamReader.Create(Filename);
+  Result := TModernStreamReader.Create(Filename);
 end;
 
-function TEvolutionStreamReader.BaseStream: TStream;
+function TModernStreamReader.BaseStream: TStream;
 begin
   Result := FDataReader.AsRef.BaseStream;
 end;
 
-function TEvolutionStreamReader.CurrentEncoding: TEncoding;
+function TModernStreamReader.CurrentEncoding: TEncoding;
 begin
   Result := FDataReader.AsRef.CurrentEncoding;
 end;
 
-procedure TEvolutionStreamReader._SetDataInternal;
+procedure TModernStreamReader._SetDataInternal;
 var
   LResultBuilder: TSmartPtr<TStringBuilder>;
   LLine: String;
@@ -400,7 +400,7 @@ begin
   end;
 end;
 
-function TEvolutionStreamReader._ProcessStream(const LOperation: String; const LProcessor: TProc<TStringBuilder>): TEvolutionStreamReader;
+function TModernStreamReader._ProcessStream(const LOperation: String; const LProcessor: TProc<TStringBuilder>): TModernStreamReader;
 var
   LBuilder: TSmartPtr<TStringBuilder>;
 begin
@@ -412,7 +412,7 @@ begin
   Result := Self;
 end;
 
-function TEvolutionStreamReader.Map(const AFunc: TFunc<String, String>): TEvolutionStreamReader;
+function TModernStreamReader.Map(const AFunc: TFunc<String, String>): TModernStreamReader;
 begin
   Result := _ProcessStream('Map', procedure(LBuilder: TStringBuilder)
     var
@@ -427,7 +427,7 @@ begin
     end);
 end;
 
-//function TEvolutionStreamReader.Map<TResult>(const AMappingFunc: TFunc<String, TResult>): TVector<TResult>;
+//function TModernStreamReader.Map<TResult>(const AMappingFunc: TFunc<String, TResult>): TVector<TResult>;
 //var
 //  LLine: String;
 //begin
@@ -440,7 +440,7 @@ end;
 //  end;
 //end;
 
-function TEvolutionStreamReader.Filter(const APredicate: TPredicate<String>): TEvolutionStreamReader;
+function TModernStreamReader.Filter(const APredicate: TPredicate<String>): TModernStreamReader;
 begin
   Result := _ProcessStream('Filter', procedure(LBuilder: TStringBuilder)
     var
@@ -458,7 +458,7 @@ begin
     end);
 end;
 
-function TEvolutionStreamReader.Reduce(const AFunc: TFunc<Integer, String, Integer>;
+function TModernStreamReader.Reduce(const AFunc: TFunc<Integer, String, Integer>;
   const AInitialValue: Integer): Integer;
 var
   LLine: String;
@@ -473,7 +473,7 @@ begin
   end;
 end;
 
-function TEvolutionStreamReader.ForEach(const AAction: TProc<String>): TEvolutionStreamReader;
+function TModernStreamReader.ForEach(const AAction: TProc<String>): TModernStreamReader;
 var
   LLine: String;
 begin
@@ -487,7 +487,7 @@ begin
   Result := Self;
 end;
 
-//function TEvolutionStreamReader.GroupBy(const AKeySelector: TFunc<String, String>): TMap<String, TVector<String>>;
+//function TModernStreamReader.GroupBy(const AKeySelector: TFunc<String, String>): TMap<String, TVector<String>>;
 //var
 //  LList: TVector<String>;
 //  LLine, LKey: String;
@@ -509,7 +509,7 @@ end;
 //  end;
 //end;
 
-function TEvolutionStreamReader.Distinct: TEvolutionStreamReader;
+function TModernStreamReader.Distinct: TModernStreamReader;
 begin
   Result := _ProcessStream('Distinct', procedure(LBuilder: TStringBuilder)
     var
@@ -533,7 +533,7 @@ begin
     end);
 end;
 
-function TEvolutionStreamReader.Skip(const ACount: Integer): TEvolutionStreamReader;
+function TModernStreamReader.Skip(const ACount: Integer): TModernStreamReader;
 begin
   Result := _ProcessStream('Skip', procedure(LBuilder: TStringBuilder)
     var
@@ -554,7 +554,7 @@ begin
     end);
 end;
 
-function TEvolutionStreamReader.Sort: TEvolutionStreamReader;
+function TModernStreamReader.Sort: TModernStreamReader;
 begin
   Result := _ProcessStream('Sort', procedure(LBuilder: TStringBuilder)
     var
@@ -573,7 +573,7 @@ begin
     end);
 end;
 
-function TEvolutionStreamReader.Take(const ACount: Integer): TEvolutionStreamReader;
+function TModernStreamReader.Take(const ACount: Integer): TModernStreamReader;
 begin
   Result := _ProcessStream('Take', procedure(LBuilder: TStringBuilder)
     var
@@ -591,7 +591,7 @@ begin
     end);
 end;
 
-function TEvolutionStreamReader.Concat(const AStreamReader: TEvolutionStreamReader): TEvolutionStreamReader;
+function TModernStreamReader.Concat(const AStreamReader: TModernStreamReader): TModernStreamReader;
 begin
   Result := _ProcessStream('Concat', procedure(LBuilder: TStringBuilder)
     var
@@ -613,10 +613,10 @@ begin
     end);
 end;
 
-function TEvolutionStreamReader.Partition(const APredicate: TPredicate<String>): TPair<TEvolutionStreamReader, TEvolutionStreamReader>;
+function TModernStreamReader.Partition(const APredicate: TPredicate<String>): TPair<TModernStreamReader, TModernStreamReader>;
 var
   LLeftStream, LRightStream: TSmartPtr<TStringStream>;
-  LLeftReader, LRightReader: TEvolutionStreamReader;
+  LLeftReader, LRightReader: TModernStreamReader;
   LLine: String;
 begin
   LLeftStream := TStringStream.Create('', TEncoding.UTF8);
@@ -635,11 +635,11 @@ begin
       _NotifyListeners(LLine, 'Partition');
     end;
     LLeftStream.AsRef.DataString;
-    LLeftReader := TEvolutionStreamReader.New(LLeftStream.AsRef);
+    LLeftReader := TModernStreamReader.New(LLeftStream.AsRef);
     LLeftReader._SetDataInternal;
 
     LRightStream.AsRef.DataString;
-    LRightReader := TEvolutionStreamReader.New(LRightStream.AsRef);
+    LRightReader := TModernStreamReader.New(LRightStream.AsRef);
     LRightReader._SetDataInternal;
   except
     if Assigned(LLeftReader) then
@@ -651,7 +651,7 @@ begin
   Result.Create(LLeftReader, LRightReader);
 end;
 
-function TEvolutionStreamReader.Join(const ASeparator: String): String;
+function TModernStreamReader.Join(const ASeparator: String): String;
 var
   LBuilder: TSmartPtr<TStringBuilder>;
   LLine: String;
@@ -669,7 +669,7 @@ begin
   Result := LBuilder.AsRef.ToString;
 end;
 
-function TEvolutionStreamReader.AsLine: String;
+function TModernStreamReader.AsLine: String;
 begin
   if FDataReader.AsRef.EndOfStream then
     Result := ''
@@ -677,12 +677,12 @@ begin
     Result := FDataReader.AsRef.ReadLine;
 end;
 
-function TEvolutionStreamReader.AsString: String;
+function TModernStreamReader.AsString: String;
 begin
   Result := FDataString.AsRef.DataString;
 end;
 
-procedure TEvolutionStreamReader._NotifyListeners(const LLine: String; const LOperation: String);
+procedure TModernStreamReader._NotifyListeners(const LLine: String; const LOperation: String);
 var
   LListener: TStreamReaderListenerEvent;
 begin
@@ -691,20 +691,20 @@ begin
       LListener(LLine, LOperation);
 end;
 
-procedure TEvolutionStreamReader.AddListener(const Listener: TStreamReaderListenerEvent);
+procedure TModernStreamReader.AddListener(const Listener: TStreamReaderListenerEvent);
 begin
   if not Assigned(FListeners) then
     FListeners := TList<TStreamReaderListenerEvent>.Create;
   FListeners.Add(Listener);
 end;
 
-procedure TEvolutionStreamReader.RemoveListener(const Listener: TStreamReaderListenerEvent);
+procedure TModernStreamReader.RemoveListener(const Listener: TStreamReaderListenerEvent);
 begin
   if Assigned(FListeners) then
     FListeners.Remove(Listener);
 end;
 
-function TEvolutionStreamReader.Any(const APredicate: TPredicate<String>): Boolean;
+function TModernStreamReader.Any(const APredicate: TPredicate<String>): Boolean;
 var
   LLine: String;
 begin
@@ -719,7 +719,7 @@ begin
   Result := False;
 end;
 
-function TEvolutionStreamReader.All(const APredicate: TPredicate<String>): Boolean;
+function TModernStreamReader.All(const APredicate: TPredicate<String>): Boolean;
 var
   LLine: String;
 begin
@@ -734,8 +734,8 @@ begin
   Result := True;
 end;
 
-function TEvolutionStreamReader.Comprehend(const ACondition: TPredicate<String>;
-  const ATransform: TFunc<String, String>): TEvolutionStreamReader;
+function TModernStreamReader.Comprehend(const ACondition: TPredicate<String>;
+  const ATransform: TFunc<String, String>): TModernStreamReader;
 begin
   Result := _ProcessStream('Comprehend', procedure(LBuilder: TStringBuilder)
     var

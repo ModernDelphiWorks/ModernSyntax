@@ -1,4 +1,4 @@
-﻿{
+{
   ------------------------------------------------------------------------------
   ModernSyntax
   Bringing modern language syntax and paradigms to Delphi through classes and methods.

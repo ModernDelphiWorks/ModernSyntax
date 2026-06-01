@@ -1,4 +1,4 @@
-ï»¿{
+{
   ------------------------------------------------------------------------------
   ModernSyntax
   Bringing modern language syntax and paradigms to Delphi through classes and methods.
@@ -437,7 +437,7 @@ begin
     if LInner.IsType<TOption<U>> then
       Result := LInner.AsType<TOption<U>>
     else
-      raise Exception.Create('Flatten sÃ³ pode ser usado quando T Ã© TOption<U>');
+      raise Exception.Create('Flatten só pode ser usado quando T é TOption<U>');
   end
   else
     Result := TOption<U>.None;

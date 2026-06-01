@@ -1,5 +1,5 @@
 {
-      ECL Brasil - Essential Core Library para quem utiliza Delphi
+      ModernSyntax - Functional Programming Toolkit for Delphi
 
                    Copyright (c) 2016, Isaque Pinheiro
                           All rights reserved.
@@ -18,7 +18,7 @@
 }
 
 {
-  @abstract(ECLBr Library)
+  @abstract(ModernSyntax Library)
   @created(23 Abr 2023)
   @author(Isaque Pinheiro <isaquepsp@gmail.com>)
 }

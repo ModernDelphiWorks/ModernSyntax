@@ -1,4 +1,4 @@
-﻿{
+{
   ------------------------------------------------------------------------------
   ModernSyntax
   Bringing modern language syntax and paradigms to Delphi through classes and methods.
@@ -25,7 +25,7 @@ type
   TOptionsLib = RegularExpressions.TRegExOptions;
   TGroupLib = RegularExpressions.TGroupCollection;
 
-  TEvolutionRegEx = class
+  TModernRegEx = class
   public
     /// <summary>
     ///   Determines whether the specified input String matches the specified regular expression pattern.
@@ -217,80 +217,80 @@ type
 
 implementation
 
-{ TInfraRegEx }
+{ TModernRegEx }
 
-class function TEvolutionRegEx.IsMatch(const AInput, APattern: String): Boolean;
+class function TModernRegEx.IsMatch(const AInput, APattern: String): Boolean;
 begin
   Result := TRegEx.IsMatch(AInput, APattern, [roIgnoreCase]);
 end;
 
-class function TEvolutionRegEx.IsMatchCredCard(const ANumber: String): Boolean;
+class function TModernRegEx.IsMatchCredCard(const ANumber: String): Boolean;
 begin
   Result := TRegEx.IsMatch(ANumber, '^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/\d{4}$');
 end;
 
-class function TEvolutionRegEx.IsMatchCEP(const ACEP: String): Boolean;
+class function TModernRegEx.IsMatchCEP(const ACEP: String): Boolean;
 begin
   Result := TRegEx.IsMatch(ACEP, '^\d{8}$');
 end;
 
-class function TEvolutionRegEx.IsMatchCNPJ(const ACNPJ: String): Boolean;
+class function TModernRegEx.IsMatchCNPJ(const ACNPJ: String): Boolean;
 begin
   Result := TRegEx.IsMatch(ACNPJ, '^\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}$');
 end;
 
-class function TEvolutionRegEx.IsMatchCPF(const ACPF: String): Boolean;
+class function TModernRegEx.IsMatchCPF(const ACPF: String): Boolean;
 begin
   Result := TRegEx.IsMatch(ACPF, '^\d{3}\.\d{3}\.\d{3}-\d{2}$');
 end;
 
-class function TEvolutionRegEx.IsMatchData(const ADate: String): Boolean;
+class function TModernRegEx.IsMatchData(const ADate: String): Boolean;
 begin
   Result := TRegEx.IsMatch(ADate, '^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/\d{4}$');
 end;
 
-class function TEvolutionRegEx.IsMatchDDDPhone(const APhone: String): Boolean;
+class function TModernRegEx.IsMatchDDDPhone(const APhone: String): Boolean;
 begin
   Result := TRegEx.IsMatch(APhone, '^\(\d{2}\) 9\d{4}-\d{4}$|^\(\d{2}\) [2-5]\d{3}-\d{4}$');
 end;
 
-class function TEvolutionRegEx.IsMatchIPV4(const AIPV4: String): Boolean;
+class function TModernRegEx.IsMatchIPV4(const AIPV4: String): Boolean;
 begin
   Result := TRegEx.IsMatch(AIPV4, '^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$');
 end;
 
-class function TEvolutionRegEx.IsMatch(const AInput, APattern: String;
+class function TModernRegEx.IsMatch(const AInput, APattern: String;
   const AOptions: TOptionsLib): Boolean;
 begin
   Result := TRegEx.IsMatch(AInput, APattern, AOptions);
 end;
 
-class function TEvolutionRegEx.IsMatchPlaca(const APlaca: String): Boolean;
+class function TModernRegEx.IsMatchPlaca(const APlaca: String): Boolean;
 begin
   Result := TRegEx.IsMatch(APlaca, '^[A-Z]{2,3}-\d{4}$');
 end;
 
-class function TEvolutionRegEx.IsMatchPlacaMercosul(const APlaca: String): Boolean;
+class function TModernRegEx.IsMatchPlacaMercosul(const APlaca: String): Boolean;
 begin
   Result := TRegEx.IsMatch(APlaca, '^[A-Z]{3}\d{1}[A-Z]\d{2}$|^[A-Z]{2}\d{2}[A-Z]\d{1}$');
 end;
 
-class function TEvolutionRegEx.IsMatchURL(const AURL: String): Boolean;
+class function TModernRegEx.IsMatchURL(const AURL: String): Boolean;
 begin
   Result := TRegEx.IsMatch(AURL, '^(https?|ftp)://[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|]', [roIgnoreCase]);
 end;
 
-class function TEvolutionRegEx.IsMatchUUID(const AUUID: String): Boolean;
+class function TModernRegEx.IsMatchUUID(const AUUID: String): Boolean;
 begin
   Result := TRegEx.IsMatch(AUUID, '^(\{)?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(\})?$');
 end;
 
-class function TEvolutionRegEx.IsMatchValidEmail(const AEmail: String): Boolean;
+class function TModernRegEx.IsMatchValidEmail(const AEmail: String): Boolean;
 begin
   Result := TRegEx.IsMatch(AEmail, '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
 end;
 
-class function TEvolutionRegEx.MatchExpression(const AValue,
+class function TModernRegEx.MatchExpression(const AValue,
   AExpression: String): TMatchLib;
 var
   LRegEx: TRegEx;
@@ -301,25 +301,25 @@ begin
   Result := LMatch;
 end;
 
-class function TEvolutionRegEx.Replace(const AInput, APattern: String;
+class function TModernRegEx.Replace(const AInput, APattern: String;
   AEvaluator: TMatchEvaluator): String;
 begin
    Result := TRegEx.Replace(AInput, APattern, AEvaluator);
 end;
 
-class function TEvolutionRegEx.Replace(const AInput, APattern, AReplacement: String;
+class function TModernRegEx.Replace(const AInput, APattern, AReplacement: String;
   AOptions: TOptionsLib): String;
 begin
    Result := TRegEx.Replace(AInput, APattern, AReplacement, AOptions);
 end;
 
-class function TEvolutionRegEx.Replace(const AInput, APattern: String;
+class function TModernRegEx.Replace(const AInput, APattern: String;
   AEvaluator: TMatchEvaluator; AOptions: TOptionsLib): String;
 begin
    Result := TRegEx.Replace(AInput, APattern, AEvaluator, AOptions);
 end;
 
-class function TEvolutionRegEx.Replace(const AInput, APattern,
+class function TModernRegEx.Replace(const AInput, APattern,
   AReplacement: String): String;
 begin
    Result := TRegEx.Replace(AInput, APattern, AReplacement);

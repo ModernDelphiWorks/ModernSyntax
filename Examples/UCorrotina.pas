@@ -5,9 +5,9 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, Rtti,
-  System.Evolution.Std,
-  System.Evolution.Coroutine,
-  System.Evolution.Threading;
+  ModernSyntax.Std,
+  ModernSyntax.Coroutine,
+  ModernSyntax.Async;
 
 type
   TForm2 = class(TForm)
@@ -124,7 +124,7 @@ begin
     if Value.AsInteger < 10 then
     begin
       Result.SetOk(Value.AsInteger + 1);
-//    simulação de error
+//    simulao de error
 //    raise Exception.Create('Error Message');
     end
     else
@@ -144,7 +144,7 @@ begin
     if (Value.AsInteger > 1) and (Value.AsInteger <= 15) then
     begin
       Result.SetOk(Value.AsInteger - 1);
-//    simulação de error
+//    simulao de error
 //    raise Exception.Create('Error Message');
     end
     else
@@ -198,7 +198,7 @@ begin
                        Result := Value.AsInteger + 1
                      else
                        Result := TValue.Empty;
-//                     simulação de error
+//                     simulao de error
 //                     raise Exception.Create('Error Message');
                    end).Await;
   Result := LFuture;
@@ -215,7 +215,7 @@ begin
                        Result := Value.AsInteger - 1
                      else
                        Result := TValue.Empty;
-//                     simulação de error
+//                     simulao de error
 //                     raise Exception.Create('Error Message');
                    end).Await;
   Result := LFuture;
@@ -228,4 +228,3 @@ begin
 end;
 
 end.
-

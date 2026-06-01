@@ -1,4 +1,4 @@
-﻿{
+{
   ------------------------------------------------------------------------------
   ModernSyntax
   Bringing modern language syntax and paradigms to Delphi through classes and methods.
@@ -312,7 +312,7 @@ begin
   Result := TMatch<T>(Self);
   if not (FSession in [TMatchSession.sMatch, TMatchSession.sGuard, TMatchSession.sCase]) then
     Exit;
-  if TEvolutionRegEx.IsMatch(AInput, APattern) then
+  if TModernRegEx.IsMatch(AInput, APattern) then
     Result.FRegexCount := Result.FRegexCount + 1
   else
     Result.FRegexCount := Result.FRegexCount - 1;

@@ -1,4 +1,4 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{377118D5-B600-42B6-BDAA-76AC7E506E6F}</ProjectGuid>
         <ProjectVersion>20.3</ProjectVersion>
@@ -136,10 +136,10 @@
         <DCCReference Include="UCorrotina.pas">
             <Form>Form2</Form>
         </DCCReference>
-        <DCCReference Include="..\Source\System.Evolution.Coroutine.pas"/>
-        <DCCReference Include="..\Source\System.Evolution.Std.pas"/>
-        <DCCReference Include="..\Source\System.Evolution.System.pas"/>
-        <DCCReference Include="..\Source\System.Evolution.Threading.pas"/>
+        <DCCReference Include="..\Source\ModernSyntax.Coroutine.pas"/>
+        <DCCReference Include="..\Source\ModernSyntax.Std.pas"/>
+        <DCCReference Include="..\Source\ModernSyntax.pas"/>
+        <DCCReference Include="..\Source\ModernSyntax.Async.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

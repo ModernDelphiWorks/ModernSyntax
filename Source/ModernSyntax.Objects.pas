@@ -1,4 +1,4 @@
-﻿{
+{
   ------------------------------------------------------------------------------
   ModernSyntax
   Bringing modern language syntax and paradigms to Delphi through classes and methods.
@@ -13,7 +13,7 @@
 
 unit ModernSyntax.Objects;
 
-{$I .\evolution4d.inc}
+{$I .\ModernSyntax.inc}
 
 interface
 

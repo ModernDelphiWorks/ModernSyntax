@@ -1,4 +1,4 @@
-ï»¿{
+{
   ------------------------------------------------------------------------------
   ModernSyntax
   Bringing modern language syntax and paradigms to Delphi through classes and methods.
@@ -11,7 +11,7 @@
   ------------------------------------------------------------------------------
 }
 
-unit ModernSyntax.Safetry;
+unit ModernSyntax.SafeTry;
 
 interface
 
@@ -199,7 +199,7 @@ begin
         FFinally();
       except
         on E: Exception do
-          // Ignora exceÃ§Ãµes em Finally silenciosamente
+          // Ignora exceções em Finally silenciosamente
           // Futuro: Poderia logar se houver um mecanismo global
       end;
     end;
@@ -219,7 +219,7 @@ begin
   end;
 end;
 
-{ FunÃ§Ã£o Auxiliar }
+{ Função Auxiliar }
 
 function &Try(const AFunc: TFunc<TValue>): TSafeTry;
 begin

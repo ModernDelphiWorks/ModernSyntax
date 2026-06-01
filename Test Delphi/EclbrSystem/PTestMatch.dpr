@@ -7,7 +7,7 @@ program PTestMatch;
 {$ENDIF}
 {$STRONGLINKTYPES ON}
 uses
-  FastMM4,
+//  FastMM4,
   System.SysUtils,
   {$IFDEF TESTINSIGHT}
   TestInsight.DUnitX,
