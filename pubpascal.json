@@ -1,0 +1,9 @@
+{
+  "$schema": "https://www.pubdelphi.dev/schema/pubdelphi.schema.json",
+  "name": "ModernSyntax",
+  "version": "1.0.0",
+  "kind": "runtime",
+  "sources": ["./Source/"],
+  "platforms": ["Win32", "Win64"],
+  "dependencies": {}
+}
