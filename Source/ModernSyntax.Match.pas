@@ -702,13 +702,13 @@ begin
   try
     if not _ExecuteProcSession then
     begin
-      Result := TResultPair<Boolean, String>.Failure('Use Execute after session [sCase, sDefault, sTryExcept]');
+      Result := TResultPair<Boolean, string>.New.Failure('Use Execute after session [sCase, sDefault, sTryExcept]');
       Exit;
     end
     else
     if (not _ExecuteProcGuard) or (not _ExecuteProcRegex) then
     begin
-      Result := TResultPair<Boolean, String>.Failure('No matching Guard/Regex.');
+      Result := TResultPair<Boolean, string>.New.Failure('No matching Guard/Regex.');
       Exit;
     end;
     try
@@ -716,13 +716,13 @@ begin
     except
       on E: Exception do
       begin
-        Result := TResultPair<Boolean, String>.Failure(E.Message);
+        Result := TResultPair<Boolean, string>.New.Failure(E.Message);
         try
           if (FCases[TRY_EXCEPT].Count > 0) and (_MatchingTryExcept) then
             Exit;
         except
           on E: Exception do
-            Result := TResultPair<Boolean, String>.Failure(Result.ValueFailure + sLineBreak + E.Message);
+            Result := TResultPair<Boolean, string>.New.Failure(Result.ValueFailure + sLineBreak + E.Message);
         end;
       end;
     end;
@@ -736,13 +736,13 @@ begin
   try
     if not _ExecuteProcSession then
     begin
-      Result := TResultPair<R, String>.Failure('Use Execute after session [sCase, sDefault, sTryExcept]');
+      Result := TResultPair<R, string>.New.Failure('Use Execute after session [sCase, sDefault, sTryExcept]');
       Exit;
     end
     else
     if (not _ExecuteProcGuard) or (not _ExecuteProcRegex) then
     begin
-      Result := TResultPair<R, String>.Failure('No matching Guard/Regex.');
+      Result := TResultPair<R, string>.New.Failure('No matching Guard/Regex.');
       Exit;
     end;
     try
@@ -750,13 +750,13 @@ begin
     except
       on E: Exception do
       begin
-        Result := TResultPair<R, String>.Failure(E.Message);
+        Result := TResultPair<R, string>.New.Failure(E.Message);
         try
           if (FCases[TRY_EXCEPT].Count > 0) and (_MatchingTryExcept) then
             Exit;
         except
           on E: Exception do
-            Result := TResultPair<R, String>.Failure(Result.ValueFailure + sLineBreak + E.Message);
+            Result := TResultPair<R, string>.New.Failure(Result.ValueFailure + sLineBreak + E.Message);
         end;
       end;
     end;
@@ -775,10 +775,10 @@ begin
      (_ExecuteProcCaseLt) or (_ExecuteProcCaseIn) or (_ExecuteProcCaseIs) or
      (_ExecuteProcCaseRange) or (_ExecuteProcCaseDefault) then
   begin
-    Result := TResultPair<Boolean, String>.Success(True);
+    Result := TResultPair<Boolean, string>.New.Success(True);
     Exit;
   end;
-  Result := TResultPair<Boolean, String>.Failure('No matching case found.');
+  Result := TResultPair<Boolean, string>.New.Failure('No matching case found.');
 end;
 
 function TMatch<T>._ExecuteProcCombine: Boolean;
@@ -943,22 +943,22 @@ function TMatch<T>._ExecuteFuncCasesValidation<R>: TResultPair<R, String>;
 begin
   if (not _ExecuteProcCaseIf) or (not _ExecuteFuncCaseIf) then
   begin
-    Result := TResultPair<R, String>.Failure('No matching Guard.');
+    Result := TResultPair<R, string>.New.Failure('No matching Guard.');
     Exit;
   end;
   if FCombines.Count > 0 then
   begin
-    Result := TResultPair<R, String>.Failure('The Combine method should be called with Execute() instead of Execute<T>.');
+    Result := TResultPair<R, string>.New.Failure('The Combine method should be called with Execute() instead of Execute<T>.');
     Exit;
   end;
   if (_ExecuteFuncCaseEq) or (_ExecuteFuncCaseGt) or (_ExecuteFuncCaseLt) or
      (_ExecuteFuncCaseIn) or (_ExecuteFuncCaseIs) or (_ExecuteFuncCaseRange) or
      (_ExecuteFuncCaseDefault) then
   begin
-    Result := TResultPair<R, String>.Success(FResult.AsType<R>);
+    Result := TResultPair<R, string>.New.Success(FResult.AsType<R>);
     Exit;
   end;
-  Result := TResultPair<R, String>.Failure('No matching case found.');
+  Result := TResultPair<R, string>.New.Failure('No matching case found.');
 end;
 
 function TMatch<T>._ArraysAreNotEqualCaseIf(const APair: TPair<TValue, TValue>): Boolean;

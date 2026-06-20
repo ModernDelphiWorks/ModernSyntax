@@ -389,9 +389,9 @@ end;
 function TOption<T>.OkOr<F>(const AFailure: F): TResultPair<T, F>;
 begin
   if FHasValue then
-    Result := TResultPair<T, F>.Success(FValue)
+    Result := TResultPair<T, F>.New.Success(FValue)
   else
-    Result := TResultPair<T, F>.Failure(AFailure);
+    Result := TResultPair<T, F>.New.Failure(AFailure);
 end;
 
 procedure TOption<T>.Match(const ASomeProc: TSomeProc<T>; const ANoneProc: TNoneProc);
@@ -437,7 +437,7 @@ begin
     if LInner.IsType<TOption<U>> then
       Result := LInner.AsType<TOption<U>>
     else
-      raise Exception.Create('Flatten só pode ser usado quando T é TOption<U>');
+      raise Exception.Create('Flatten sï¿½ pode ser usado quando T ï¿½ TOption<U>');
   end
   else
     Result := TOption<U>.None;
