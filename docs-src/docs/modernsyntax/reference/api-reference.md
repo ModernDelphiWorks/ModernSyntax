@@ -95,12 +95,13 @@ Complete public API surface for ModernSyntax. All types are in the `Source/` dir
 
 ### Chaining
 
-<!-- TODO: confirm ThenOf/FailOf vs Ok/Fail method names from full implementation read -->
-
 | Method | Description |
 |---|---|
-| `ThenOf(AFunc)` | Calls `AFunc(ValueSuccess)` if IsSuccess, chains result |
-| `FailOf(AFunc)` | Calls `AFunc(ValueFailure)` if IsFailure, chains result |
+| `ThenOf(AFunc)` | Registers `AFunc(ValueSuccess): TResultPair<S,F>` in the success queue; runs on `Return` |
+| `ExceptOf(AFunc)` | Registers `AFunc(ValueFailure): TResultPair<S,F>` in the failure queue; runs on `Return` |
+| `Ok(ASuccessProc)` | Executes `ASuccessProc(ValueSuccess)` immediately if IsSuccess |
+| `Fail(AFailureProc)` | Executes `AFailureProc(ValueFailure)` immediately if IsFailure |
+| `Return` | Drains the success/failure queues built by `ThenOf`/`ExceptOf` |
 
 ### Supporting types
 
@@ -243,8 +244,21 @@ Global: `Try(AFunc)`, `Try(AProc)`, `Try` (no args).
 
 | Method | Description |
 |---|---|
-| `Create(AFileName, AUseSystemFallback)` | Constructor |
-| `Load(AFileName?)` | (Re)load file <!-- TODO: confirm method name --> |
-| `Items[AName]` | Default property; returns `TValue` |
-
-<!-- TODO: confirm full TDotEnv public interface from full file read -->
+| `Create(AFileName, AUseSystemFallback)` | Constructor; loads the file immediately |
+| `Open` | Reloads variables from the current file |
+| `LoadFiles(AFileNames)` | Loads multiple `.env` files in order; later files override earlier |
+| `Save` | Writes current variables back to the file |
+| `Add(AName, AValue)` | Adds or updates a variable |
+| `Push(AName, AValue)` | Like `Add` but returns `Self` for chaining |
+| `Delete(AName)` | Removes a variable |
+| `Value<T>(AName)` | Returns the variable as type `T`; raises if not found |
+| `Get<T>(AName)` | Alias for `Value<T>` |
+| `GetOr<T>(AName, ADefault)` | Returns the variable or `ADefault` if not found |
+| `TryGet<T>(AName, out AValue)` | Non-raising lookup; returns `False` if not found |
+| `Count` | Number of variables loaded |
+| `EnvCreate(AName, AValue)` | Creates a system environment variable |
+| `EnvLoad(AName)` | Reads a system environment variable |
+| `EnvUpdate(AName, AValue)` | Updates a system environment variable |
+| `EnvDelete(AName)` | Deletes a system environment variable |
+| `Items[AName]` | Default property; read/write access as `TValue` |
+| `UseSystemFallback` | Property; if `True`, falls back to system env vars when key is missing |

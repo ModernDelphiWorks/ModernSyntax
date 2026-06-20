@@ -127,7 +127,14 @@ end;
 | `Power(Value)` | Raises to `Value` |
 | `Modulus(Value)` | Computes modulus |
 
-<!-- TODO: confirm TCurrying.Curry<A,B,R> signature from Examples/UCurryingDemo.pas -->
+The actual `Curry` class method signature is:
+
+```delphi
+class function Curry<T, U, V>(F: TFunc<T, U, V>): TFunc<T, TFunc<U, V>>;
+```
+
+It transforms a binary function `(T, U) → V` into a curried form `T → (U → V)`.
+The companion `UnCurry<T, U, V>` reverses the transformation.
 
 See the `Examples/CurryingDemo.dpr` project in the repository for live usage.
 

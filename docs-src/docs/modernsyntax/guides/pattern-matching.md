@@ -103,11 +103,12 @@ TMatch<Integer>.Value(LValue)
 
 ```delphi
 TMatch<string>.Value(LEmail)
-  .CaseRegex(LEmail, '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-    procedure begin WriteLn('Valid email'); end)   // <!-- TODO: confirm overload signature -->
-  .Default(procedure begin WriteLn('Invalid email'); end)
+  .CaseRegex(LEmail, '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+  .Default(procedure begin WriteLn('Invalid or valid email'); end)
   .Execute;
 ```
+
+`CaseRegex(AInput, APattern)` takes exactly two string arguments — the text to test and the regex pattern. It does not accept a callback; it increments an internal counter when the pattern matches (a positive count allows `Execute` to proceed). Pair it with a `Default` or other cases to handle both matched and unmatched outcomes.
 
 Note: `CaseRegex` is implemented via `TModernRegEx.IsMatch` from `ModernSyntax.RegExpression`. The regex match increments/decrements an internal counter; a negative count means no regex matched.
 

@@ -59,20 +59,22 @@ end;
 `TResultPair<S, F>` supports chaining: register callbacks that are called only if the current state matches.
 
 ```delphi
-// Ok callbacks run when IsSuccess; Fail callbacks run when IsFailure
+// ThenOf queues a success handler; ExceptOf queues a failure handler.
+// Call Return to drain the queues.
 LResult
   .ThenOf(function(const ASuccess: Integer): TResultPair<Integer, string>
     begin
       Result := TResultPair<Integer, string>.Success(ASuccess * 2);
     end)
-  .FailOf(function(const AFailure: string): TResultPair<Integer, string>
+  .ExceptOf(function(const AFailure: string): TResultPair<Integer, string>
     begin
       WriteLn('Handling error: ', AFailure);
       Result := TResultPair<Integer, string>.Failure(AFailure);
-    end);
+    end)
+  .Return;
 ```
 
-<!-- TODO: confirm exact method names ThenOf/FailOf vs Ok/Fail from source — verify in implementation section of ResultPair.pas -->
+For immediate (non-queued) side-effect callbacks use `Ok(ASuccessProc)` and `Fail(AFailureProc)` — these execute the proc right away without touching the queue.
 
 ## Exception wrappers
 
