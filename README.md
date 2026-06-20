@@ -27,6 +27,14 @@
 | :--- | :--- | :---: | :---: |
 | **Delphi XE or superior** | VCL, FMX, Console (Win/Linux/macOS/iOS/Android) | ✅ Yes | ✅ Yes |
 
+### 🐧 Cross-Platform Build — Win32 / Win64 / Linux64 (verified)
+
+> **✅ Verified 2026-06-20** in a real production backend: ModernSyntax compiles as a dependency on **Win32, Win64 and Linux64** (`dcclinux64`). macOS/iOS/Android follow from the Delphi RTL but are **not build-verified** here yet.
+
+Windows-only APIs are guarded for non-Windows targets: `TDotEnv` uses a POSIX `setenv`/`unsetenv` shim (`Posix.Stdlib`) instead of `SetEnvironmentVariable`; `OutputDebugString` falls back to `stderr`; `InterlockedIncrement64` is replaced by the cross-platform `AtomicIncrement` intrinsic; bare `uses Windows` clauses are `{$IFDEF MSWINDOWS}`-guarded. Windows behaviour is unchanged.
+
+**Building a consumer app for Linux64:** install the Linux 64-bit platform (RAD Studio GetIt / `GetItCmd -if=delphi_linux -ae`), provide a Linux SDK (RAD Studio SDK Manager + PAServer, **or** a sysroot assembled from a WSL/Linux toolchain passed to `dcclinux64` via `--syslibroot` / `--libpath`), then compile with `dcclinux64`.
+
 ### ⚙️ Installation
 
 To install using the package manager [**Boss**](https://github.com/HashLoad/boss):
@@ -116,6 +124,14 @@ end;
 | Ambiente / IDE | Plataforma / Compilador | Null Safety | Pattern Matching |
 | :--- | :--- | :---: | :---: |
 | **Delphi XE ou superior** | VCL, FMX, Console (Win/Linux/macOS/iOS/Android) | ✅ Sim | ✅ Sim |
+
+### 🐧 Build Multiplataforma — Win32 / Win64 / Linux64 (verificado)
+
+> **✅ Verificado em 2026-06-20** num backend real em produção: o ModernSyntax compila como dependência em **Win32, Win64 e Linux64** (`dcclinux64`). macOS/iOS/Android seguem da RTL Delphi, mas **ainda não foram verificados** em build aqui.
+
+APIs Windows-only ficam guardadas para alvos não-Windows: o `TDotEnv` usa um shim POSIX `setenv`/`unsetenv` (`Posix.Stdlib`) no lugar de `SetEnvironmentVariable`; `OutputDebugString` cai para `stderr`; `InterlockedIncrement64` vira o intrínseco multiplataforma `AtomicIncrement`; cláusulas `uses Windows` ficam sob `{$IFDEF MSWINDOWS}`. O comportamento no Windows não muda.
+
+**Para buildar um app consumidor no Linux64:** instale a plataforma Linux 64-bit (RAD Studio GetIt / `GetItCmd -if=delphi_linux -ae`), forneça um SDK Linux (SDK Manager do RAD Studio + PAServer, **ou** um sysroot montado de um toolchain WSL/Linux passado ao `dcclinux64` via `--syslibroot` / `--libpath`), e compile com `dcclinux64`.
 
 ### ⚙️ Instalação
 
