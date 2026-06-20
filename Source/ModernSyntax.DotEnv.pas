@@ -19,7 +19,11 @@ uses
   Rtti,
   SysUtils,
   Classes,
-  Windows,
+  {$IFDEF MSWINDOWS}
+  Windows,   // SetEnvironmentVariable; Epic 25 Linux: POSIX shim below
+  {$ELSE}
+  Posix.Stdlib,
+  {$ENDIF}
   Generics.Collections;
 
 type
@@ -145,6 +149,27 @@ type
   end;
 
 implementation
+
+{$IFNDEF MSWINDOWS}
+// Epic 25 — Linux shim for the Windows SetEnvironmentVariable API (same signature),
+// so the existing call sites compile unchanged. setenv/unsetenv from Posix.Stdlib.
+// (GetEnvironmentVariable with one string arg already resolves to the cross-platform
+// System.SysUtils version on both platforms, so the getter needs no change.)
+function SetEnvironmentVariable(AName, AValue: PChar): Boolean;
+var
+  LName, LValue: UTF8String;
+begin
+  LName := UTF8String(string(AName));
+  if AValue = nil then
+    Result := unsetenv(MarshaledAString(PAnsiChar(LName))) = 0
+  else
+  begin
+    LValue := UTF8String(string(AValue));
+    Result := setenv(MarshaledAString(PAnsiChar(LName)),
+                     MarshaledAString(PAnsiChar(LValue)), 1) = 0;
+  end;
+end;
+{$ENDIF}
 
 constructor TDotEnv.Create(const AFileName: String = '.env'; AUseSystemFallback: Boolean = True);
 begin

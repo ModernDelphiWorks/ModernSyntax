@@ -18,7 +18,9 @@ interface
 uses
   Math,
   Classes,
-  Windows,
+  {$IFDEF MSWINDOWS}
+  Windows,   // OutputDebugString (DEBUG-only); Epic 25 Linux guard
+  {$ENDIF}
   SysUtils,
   DateUtils,
   Generics.Collections,
@@ -77,7 +79,11 @@ begin
   TThread.Queue(nil,
     procedure
     begin
+      {$IFDEF MSWINDOWS}
       OutputDebugString(PWideChar('[ECL] - ' + FormatDateTime('mm/dd/yyyy, hh:mm:ss am/pm', Now) + ' LOG ' + AMessage));
+      {$ELSE}
+      Writeln(ErrOutput, '[ECL] - ' + FormatDateTime('mm/dd/yyyy, hh:mm:ss am/pm', Now) + ' LOG ' + AMessage);
+      {$ENDIF}
     end);
 end;
 {$ENDIF}
@@ -288,7 +294,7 @@ end;
 
 class function TStd.GenerateSequentialNumber: UInt64;
 begin
-  Result := InterlockedIncrement64(TStd.FSequenceCounter);
+  Result := AtomicIncrement(TStd.FSequenceCounter);   // Epic 25: cross-platform intrinsic (was Windows InterlockedIncrement64)
 end;
 
 { TPointerStream }

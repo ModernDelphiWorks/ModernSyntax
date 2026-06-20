@@ -157,8 +157,10 @@ procedure BlockedSetter(const Value: Variant);
 
 implementation
 
+{$IFDEF MSWINDOWS}
 uses
-  Windows;
+  Windows;   // vestigial (only referenced by commented-out DWORD code); Epic 25 Linux guard
+{$ENDIF}
 
 procedure BlockedSetter(const Value: Variant);
 begin
