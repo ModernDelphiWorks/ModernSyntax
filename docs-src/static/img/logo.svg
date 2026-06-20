@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" width="200" height="60">
+  <rect width="200" height="60" rx="8" fill="#5b4fc8"/>
+  <text x="100" y="38" font-family="monospace" font-size="22" font-weight="bold"
+        fill="white" text-anchor="middle">ModernSyntax</text>
+</svg>

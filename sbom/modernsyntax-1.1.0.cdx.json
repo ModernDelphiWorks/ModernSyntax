@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "metadata": {
+    "tools": [
+      {
+        "name": "PubDelphi",
+        "vendor": "PubDelphi",
+        "version": "0.18.0"
+      }
+    ],
+    "component": {
+      "name": "ModernSyntax",
+      "purl": "pkg:github/ModernDelphiWorks/ModernSyntax@1.1.0",
+      "type": "application",
+      "version": "1.1.0"
+    },
+    "timestamp": "2026-06-10T00:37:02.396Z"
+  },
+  "bomFormat": "CycloneDX",
+  "components": [],
+  "specVersion": "1.5"
+}

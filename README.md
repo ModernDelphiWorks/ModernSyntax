@@ -6,6 +6,8 @@
 
 > 🔒 **Supply-chain transparency (CRA-ready):** a machine-readable **SBOM** (CycloneDX) is published on the package portal — [pubpascal.dev/packages/modernsyntax](https://www.pubpascal.dev/packages/modernsyntax) · security disclosure policy in **[SECURITY.md](SECURITY.md)**.
 
+📚 **[Documentation](https://moderndelphiworks.github.io/ModernSyntax/)**
+
 *   [🇬🇧 English](#-english)
 *   [🇧🇷 Português](#-português)
 

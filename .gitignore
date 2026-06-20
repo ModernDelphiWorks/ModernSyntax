@@ -83,3 +83,8 @@ modules/
 # Boss package manager files
 !boss.json
 !boss-lock.json
+
+# Docusaurus (docs-src/) — local artifacts; official build on GitHub Actions
+docs-src/node_modules/
+docs-src/build/
+docs-src/.docusaurus/
