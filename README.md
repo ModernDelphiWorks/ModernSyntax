@@ -231,7 +231,7 @@ end;
 
 ---
 
-## ⛏️ Contributing / Contribuição
+## ⛏️ Contributing/Contribuição
 
 Contributions are welcome — bug reports, new features, doc improvements, or translations.
 Contribuições são bem-vindas — relatórios de bugs, novas funcionalidades, melhorias na documentação ou traduções.
