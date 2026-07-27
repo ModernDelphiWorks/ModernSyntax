@@ -64,7 +64,29 @@ type
     constructor Create(const AProc: TProc); overload;
     constructor Create(const AFunc: TFunc<TValue>); overload;
   public
+    /// <summary>
+    ///   Waits for the task, then runs <paramref name="AContinue"/> and returns the future.
+    /// </summary>
+    /// <remarks>
+    ///   TIMEOUT SEMANTICS: when <paramref name="ATimeout"/> elapses before the task
+    ///   completes, the returned future is an ERROR (IsErr) whose message states that it
+    ///   was a TIMEOUT and quotes the deadline in milliseconds. The continuation is NOT
+    ///   executed and no success value is published.
+    ///   PRECEDENCE: the timeout wins over a task exception. Once the deadline expires the
+    ///   worker is still running, so its error slot is being written by another thread and
+    ///   cannot be read safely; the future reports the timeout and discards whatever the
+    ///   orphan task may produce later.
+    ///   With the default INFINITE there is no deadline and the behaviour is unchanged.
+    /// </remarks>
     function Await(const AContinue: TProc; const ATimeout: Cardinal = INFINITE): TFuture; overload; inline;
+
+    /// <summary>
+    ///   Waits for the task and returns the future.
+    /// </summary>
+    /// <remarks>
+    ///   Same TIMEOUT semantics and precedence documented in the overload above: an expired
+    ///   deadline yields IsErr with a timeout message, never a success.
+    /// </remarks>
     function Await(const ATimeout: Cardinal = INFINITE): TFuture; overload; inline;
     function Run: TFuture; overload;
     function Run(const AError: TFunc<Exception, TFuture>): TFuture; overload; inline;
@@ -80,6 +102,33 @@ function Async(const AProc: TProc): TAsync; overload; inline;
 function Async(const AFunc: TFunc<TValue>): TAsync; overload; inline;
 
 implementation
+
+resourcestring
+  // Says TIMEOUT out loud and quotes the deadline: whoever debugs a red future has to be
+  // able to tell "the task failed" apart from "the task ran out of time".
+  SAsyncAwaitTimeout = 'Async await TIMEOUT: the task did not complete within %d ms. ' +
+    'The task was not canceled and may still be running; its result and any exception it ' +
+    'raises are discarded.';
+
+/// <summary>
+///   True when the await deadline expired with the task still running.
+/// </summary>
+/// <remarks>
+///   ITask.Wait returns False when it gives up on the deadline and True when the task
+///   finished. That Boolean used to be discarded, so an expired deadline fell straight
+///   through to SetOk and a blown deadline was reported as SUCCESS.
+///   INFINITE means "no deadline": Wait only ever returns after the task completes, and the
+///   extra guard keeps that path provably identical to the previous behaviour.
+/// </remarks>
+function _AwaitTimedOut(const ATask: ITask; const ATimeout: Cardinal): Boolean;
+begin
+  Result := (not ATask.Wait(ATimeout)) and (ATimeout <> INFINITE);
+end;
+
+function _AwaitTimeoutMessage(const ATimeout: Cardinal): String;
+begin
+  Result := Format(SAsyncAwaitTimeout, [ATimeout]);
+end;
 
 function Async(const AProc: TProc): TAsync;
 var
@@ -219,7 +268,15 @@ begin
                                LMessage := E.Message;
                            end;
                          end);
-      FTask.Wait(ATimeout);
+      if _AwaitTimedOut(FTask, ATimeout) then
+      begin
+        // Deadline expired: the worker is still running and still owns LMessage, so reading
+        // it here would be a data race on a half-written value. TIMEOUT therefore takes
+        // precedence over "the task raised", the continuation does not run and nothing is
+        // published as success.
+        Result.SetErr(_AwaitTimeoutMessage(ATimeout));
+        Exit;
+      end;
       if LMessage <> '' then
         raise EAsyncAwait.Create(LMessage);
 
@@ -305,7 +362,14 @@ begin
                                LMessage := E.Message;
                            end;
                          end);
-      FTask.Wait(ATimeout);
+      if _AwaitTimedOut(FTask, ATimeout) then
+      begin
+        // Deadline expired: LValue may never have been assigned (or is being assigned right
+        // now by the worker), so publishing it as a success would hand back a value the task
+        // never produced. TIMEOUT takes precedence and the continuation does not run.
+        Result.SetErr(_AwaitTimeoutMessage(ATimeout));
+        Exit;
+      end;
       if LMessage <> '' then
         raise EAsyncAwait.Create(LMessage);
 
@@ -352,7 +416,13 @@ begin
                                LMessage := E.Message;
                            end;
                          end);
-      FTask.Wait(ATimeout);
+      if _AwaitTimedOut(FTask, ATimeout) then
+      begin
+        // Worst of the four sites before the fix: SetOk(LValue) published an LValue the task
+        // may never have produced. TIMEOUT takes precedence and nothing is published.
+        Result.SetErr(_AwaitTimeoutMessage(ATimeout));
+        Exit;
+      end;
       if LMessage <> '' then
         raise EAsyncAwait.Create(LMessage);
 
@@ -384,7 +454,13 @@ begin
                                LMessage := E.Message;
                            end;
                          end);
-      FTask.Wait(ATimeout);
+      if _AwaitTimedOut(FTask, ATimeout) then
+      begin
+        // Deadline expired with the worker still running: report the TIMEOUT instead of the
+        // old SetOk(True), which claimed the procedure had finished when it had not.
+        Result.SetErr(_AwaitTimeoutMessage(ATimeout));
+        Exit;
+      end;
       if LMessage <> '' then
         raise EAsyncAwait.Create(LMessage);
 

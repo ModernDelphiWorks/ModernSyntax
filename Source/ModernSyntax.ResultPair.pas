@@ -149,6 +149,17 @@ type
     ///   Use this procedure to release any resources, if applicable, and perform necessary cleanup
     ///   for the current TResultPair instance. It's recommended to call this method when you are
     ///   finished using the TResultPair object to ensure proper resource management.
+    ///
+    ///   IDEMPOTENT: calling Dispose twice on the same instance frees at most once. The value
+    ///   slot is cleared before the object is freed, so a second call finds nothing to free and
+    ///   returns without touching released memory. It is also safe on a pair whose S/F slot was
+    ///   never set and on a slot holding nil.
+    ///
+    ///   STILL MANUAL BY DESIGN: TResultPair is a plain (unmanaged) record and deliberately has
+    ///   NO class operator Finalize. Going out of scope frees nothing; ownership of any class
+    ///   value stays with the caller. See the note above the implementation of _DestroyFailure
+    ///   for why adding Finalize would be a double-free, both inside this unit and in existing
+    ///   consumers.
     /// </remarks>
     procedure Dispose; inline;
 
@@ -554,16 +565,25 @@ implementation
 procedure TResultPair<S, F>._DestroySuccess;
 var
   LTypeInfo: PTypeInfo;
-  LObject: TValue;
+  LObject: TObject;
 begin
-  if @FSuccess = nil then
-    Exit;
   LTypeInfo := TypeInfo(S);
-  if LTypeInfo.Kind = tkClass then
-  begin
-    LObject := TValue.From<S>(FSuccess.GetValue);
-    LObject.AsObject.Free;
-  end;
+  // `if @FSuccess = nil` (the old guard) can never be True - it is the address of a field of
+  // Self, not a pointer to the value. The guards that actually matter are these three.
+  if LTypeInfo = nil then          // some type arguments carry no RTTI
+    Exit;
+  if LTypeInfo.Kind <> tkClass then // only class values are owned/freed here
+    Exit;
+  // Never set (or already released): nothing to free. Without this, GetValue would raise
+  // 'Value is nil.' whenever S is a class and the pair carries a failure.
+  if not FSuccess.HasValue then
+    Exit;
+  LObject := TValue.From<S>(FSuccess.GetValue).AsObject;
+  // Clear the slot BEFORE freeing. This is what makes Dispose idempotent: a second call (or
+  // a Dispose after some other code already released through this same instance) sees an
+  // empty slot and returns without touching released memory.
+  FSuccess := Default(TResultPairValue<S>);
+  LObject.Free;
 end;
 
 procedure TResultPair<S, F>._SetFailureValue(const AFailure: F);
@@ -589,19 +609,51 @@ begin
   _DestroyFailure;
 end;
 
+// WHY THERE IS NO `class operator Finalize` HERE
+// ----------------------------------------------
+// The obvious "structural" fix for the leak of a class-typed failure value would be to give
+// TResultPair a Finalize operator so that leaving scope releases it. It cannot be done in
+// this shape, and it would be strictly worse than the leak:
+//
+//  1) The record is copied on almost every call. Success/Failure/Pure/Ok/Fail/When/Map/
+//     ThenOf/ExceptOf/Return all do `Result := Self`, and Reduce/_ReturnSuccess/_ReturnFailure
+//     keep local copies. Every one of those temporaries holds the SAME object pointer, so a
+//     Finalize that frees would double-free inside this very unit, before any consumer code
+//     is reached. Making it correct would require a full ownership model (class operator
+//     Assign + a heap-allocated refcount), which changes copy semantics and cost for everyone.
+//
+//  2) Consumers already free manually. In the ERP that drives this framework there are ~9
+//     call sites that read the failure and free it, plus ~1128 `procedure(E: Exception)`
+//     callbacks whose body is `E.Free`. Turning the record managed converts every one of them
+//     into a double free - heap corruption instead of a leak.
+//
+//  3) A consumer test asserts the current semantics on purpose ("leaving scope does NOT
+//     release, which is why the consume-helper exists"). Finalize would both fail that test
+//     and crash it.
+//
+//  4) Custom managed records (Initialize/Finalize/Assign) require Delphi 10.4+; this unit is
+//     built for the compatibility matrix in ModernSyntax.inc (Delphi 2010 upwards) and for
+//     FPC/Lazarus. Adding them would drop compilers that work today.
+//
+// So ownership stays explicit: Dispose is the single, MANUAL release point - and it is now
+// idempotent, so calling it twice (or after someone else already released through the same
+// instance) is harmless.
 procedure TResultPair<S, F>._DestroyFailure;
 var
   LTypeInfo: PTypeInfo;
-  LObject: TValue;
+  LObject: TObject;
 begin
-  if @FFailure = nil then
-    Exit;
   LTypeInfo := TypeInfo(F);
-  if LTypeInfo.Kind = tkClass then
-  begin
-    LObject := TValue.From<F>(FFailure.GetValue);
-    LObject.AsObject.Free;
-  end;
+  if LTypeInfo = nil then
+    Exit;
+  if LTypeInfo.Kind <> tkClass then
+    Exit;
+  if not FFailure.HasValue then
+    Exit;
+  LObject := TValue.From<F>(FFailure.GetValue).AsObject;
+  // Clear before freeing - see _DestroySuccess.
+  FFailure := Default(TResultPairValue<F>);
+  LObject.Free;
 end;
 
 function TResultPair<S, F>.Fail(const AFailureProc: TProc<F>): TResultPair<S, F>;
