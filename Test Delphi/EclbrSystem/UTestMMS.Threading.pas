@@ -51,6 +51,8 @@ type
     [Test]
     procedure TestAwaitTaskExceptionKeepsItsMessage;
     [Test]
+    procedure TestIsAwaitTimeoutClassifiesWithoutStringSniffing;
+    [Test]
     procedure TestAwaitTaskExceptionWinsWhenTaskFinishedInTime;
   end;
 
@@ -165,9 +167,9 @@ var
   LFuture: TFuture;
   LErr: String;
 begin
-  // Neste caso no ECL o "Run" nï¿½o usa Function, mas somente Procedure, se quiser
+  // Neste caso no ECL o "Run" não usa Function, mas somente Procedure, se quiser
   // usar Function use o "Await", pois ele espera o resultado para devolver, o
-  // "Run" nï¿½o fica esperando, somente aloca a thread e executa
+  // "Run" não fica esperando, somente aloca a thread e executa
   LFuture := Async(function: TValue
                    begin
                      Result := False;
@@ -214,9 +216,9 @@ begin
   try
     Assert.IsTrue(LFuture.IsErr, 'an expired deadline is an ERROR');
     Assert.IsFalse(LFuture.IsOk, 'and it must NOT be reported as a success');
-    Assert.IsTrue(Pos('TIMEOUT', LFuture.Err) > 0,
-      'the message has to say TIMEOUT so it can be told apart from "the task failed": ' +
-      LFuture.Err);
+    Assert.IsTrue(IsAwaitTimeout(LFuture),
+      'it has to be classifiable as a TIMEOUT, so it can be told apart from "the task ' +
+      'failed": ' + LFuture.Err);
     Assert.IsTrue(Pos(IntToStr(CDeadlineMs) + ' ms', LFuture.Err) > 0,
       'the message has to quote the deadline that was blown: ' + LFuture.Err);
   finally
@@ -239,7 +241,7 @@ begin
   LFuture := LAsync.Await(CDeadlineMs);
   try
     Assert.IsTrue(LFuture.IsErr, 'an expired deadline is an ERROR');
-    Assert.IsTrue(Pos('TIMEOUT', LFuture.Err) > 0, 'and it says TIMEOUT: ' + LFuture.Err);
+    Assert.IsTrue(IsAwaitTimeout(LFuture), 'and it classifies as a TIMEOUT: ' + LFuture.Err);
     Assert.WillRaise(
       procedure
       begin
@@ -336,7 +338,46 @@ begin
 
   Assert.IsTrue(LFuture.IsErr, 'a task that raises produces an error future');
   Assert.AreEqual('task blew up', LFuture.Err, 'the task message is preserved verbatim');
-  Assert.IsTrue(Pos('TIMEOUT', LFuture.Err) = 0, 'a failure is not a timeout');
+  Assert.IsFalse(IsAwaitTimeout(LFuture), 'a failure is not a timeout');
+end;
+
+procedure TTesTStd.TestIsAwaitTimeoutClassifiesWithoutStringSniffing;
+var
+  LAsync: TAsync;
+  LTimedOut: TFuture;
+  LTaskFailed: TFuture;
+  LSucceeded: TFuture;
+begin
+  // The whole point of IsAwaitTimeout: consumers used to write Pos('TIMEOUT', LFuture.Err),
+  // which misfires on any task message that merely CONTAINS the word. The classification is
+  // anchored at the start of the message, so a task that raises with the word in it is still
+  // a task failure.
+  LTaskFailed := Async(procedure
+                       begin
+                         raise Exception.Create('gateway said TIMEOUT while reading the socket');
+                       end)
+                .Await;
+  Assert.IsTrue(LTaskFailed.IsErr, 'the task raised, so the future is red');
+  Assert.IsFalse(IsAwaitTimeout(LTaskFailed),
+    'a task message that merely mentions TIMEOUT is NOT an await timeout');
+
+  LSucceeded := Async(procedure
+                      begin
+                      end)
+               .Await(CGenerousMs);
+  Assert.IsTrue(LSucceeded.IsOk);
+  Assert.IsFalse(IsAwaitTimeout(LSucceeded), 'a green future is never a timeout');
+
+  LAsync := Async(procedure
+                  begin
+                    Sleep(CTaskSleepMs);
+                  end);
+  LTimedOut := LAsync.Await(CDeadlineMs);
+  try
+    Assert.IsTrue(IsAwaitTimeout(LTimedOut), 'and the real thing still classifies as one');
+  finally
+    Sleep(CDrainMs);
+  end;
 end;
 
 procedure TTesTStd.TestAwaitTaskExceptionWinsWhenTaskFinishedInTime;

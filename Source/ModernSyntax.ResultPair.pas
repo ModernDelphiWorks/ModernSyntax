@@ -155,6 +155,22 @@ type
     ///   returns without touching released memory. It is also safe on a pair whose S/F slot was
     ///   never set and on a slot holding nil.
     ///
+    ///   IDEMPOTENCE IS PER INSTANCE, NOT PER OBJECT. TResultPair is an unmanaged record, so
+    ///   assigning it (or passing it by value, or going through one of the Implicit operators)
+    ///   produces an INDEPENDENT copy that holds the SAME object pointer. Clearing the slot
+    ///   clears it in one copy only. Two copies with one Dispose each therefore free the same
+    ///   object TWICE:
+    ///
+    ///     LA := TResultPair&lt;TObject, TObject&gt;.New.Success(TObject.Create);
+    ///     LB := LA;      // independent copy, same pointer
+    ///     LA.Dispose;    // frees the object, clears LA's slot only
+    ///     LB.Dispose;    // DOUBLE FREE - LB's slot still points at the released object
+    ///
+    ///   The guarantee is "Dispose twice through the SAME variable is harmless", which is what
+    ///   protects a cleanup path that runs more than once. It is NOT "the object can only ever
+    ///   be freed once". Exactly one copy must own the value; decide which one and dispose only
+    ///   that one.
+    ///
     ///   STILL MANUAL BY DESIGN: TResultPair is a plain (unmanaged) record and deliberately has
     ///   NO class operator Finalize. Going out of scope frees nothing; ownership of any class
     ///   value stays with the caller. See the note above the implementation of _DestroyFailure
@@ -631,9 +647,18 @@ end;
 //     release, which is why the consume-helper exists"). Finalize would both fail that test
 //     and crash it.
 //
-//  4) Custom managed records (Initialize/Finalize/Assign) require Delphi 10.4+; this unit is
-//     built for the compatibility matrix in ModernSyntax.inc (Delphi 2010 upwards) and for
-//     FPC/Lazarus. Adding them would drop compilers that work today.
+//  4) Custom managed records (Initialize/Finalize/Assign) require Delphi 10.4+, and the
+//     supported floor is Delphi XE - README.md:3 (badge) and README.md:33 (compatibility
+//     matrix). Adding them would drop every compiler from XE to 10.3 that builds this unit
+//     today, which is the whole lower half of the declared matrix.
+//     (Correcting the earlier wording of this item: it cited ModernSyntax.inc and "Delphi 2010
+//     upwards" and an FPC/Lazarus target, and all three were wrong. This unit does NOT include
+//     ModernSyntax.inc - the only {$I} in the project is at ModernSyntax.Objects.pas:16 - and
+//     no unit anywhere in the repository consumes a single symbol that file defines, so the
+//     .inc does not set the floor; the README does. FPC/Lazarus is not a build target either:
+//     the .inc's Lazarus block is dead code, guarded by {$IFDEF FCP} - a typo for FPC - at
+//     ModernSyntax.inc:256. The CONCLUSION is unaffected: 10.4+ is still above the XE floor,
+//     so Finalize still cannot be used.)
 //
 // So ownership stays explicit: Dispose is the single, MANUAL release point - and it is now
 // idempotent, so calling it twice (or after someone else already released through the same
@@ -681,6 +706,35 @@ begin
     Result := _ReturnFailure;
 end;
 
+// KNOWN BUG - see https://github.com/ModernDelphiWorks/ModernSyntax/issues/8
+// -------------------------------------------------------------------------
+// Two defects live in this routine (and identically in _ReturnSuccess below). They are NOT
+// fixed here on purpose: the correct fix is an ownership refactor of the whole Return chain,
+// which changes what Return gives back, so it belongs in its own PR with its own tests.
+//
+//  1) THE TRANSFORMATION IS DISCARDED. `Result := Self` happens BEFORE the loop, while
+//     _SetSuccessValue/_SetFailureValue write into Self. Result is a separate copy taken
+//     beforehand, so the value handed back is the PRE-transformation one. TResultPair is a
+//     record, so Self is the caller's own variable and the mutation does land there - which
+//     means `x := x.Return` and `x.Return` disagree about the outcome.
+//
+//  2) USE-AFTER-FREE. _SetFailureValue(LResult.ValueFailure) copies the POINTER out of
+//     LResult; the `finally` then does LResult.Dispose, which frees the object behind that
+//     pointer. Self.FFailure is left holding released memory. Same shape for the success
+//     branch.
+//
+// CHANGE OF BEHAVIOUR INTRODUCED BY PR #7 (for TResultPair<class, class> only):
+//   before #7 - LResult.Dispose entered _DestroySuccess, called FSuccess.GetValue on a slot
+//               that had never been set and raised 'Value is nil.'. The exception escaped the
+//               `finally`, _DestroyFailure never ran and the object was never freed. An
+//               ACCIDENTAL SHIELD: loud, and no dangling pointer.
+//   after  #7 - _DestroySuccess returns early on `not FSuccess.HasValue`, _DestroyFailure runs
+//               and frees the object. Verified by address comparison: `dangling? True`, and
+//               SILENT.
+// For a non-class S nothing changed (_DestroySuccess bailed out at the tkClass check both
+// before and after), so there the dangling pointer is equally old. #7 is still a net win, but
+// for <class, class> it traded a noisy abort for a quiet use-after-free, and the record has to
+// say so.
 function TResultPair<S, F>._ReturnFailure: TResultPair<S, F>;
 var
   LFor: Integer;
@@ -702,6 +756,25 @@ begin
   end;
 end;
 
+// KNOWN BUG - see https://github.com/ModernDelphiWorks/ModernSyntax/issues/8
+// -------------------------------------------------------------------------
+// Same two defects documented above _ReturnFailure, plus one of its own:
+//
+//  1) THE TRANSFORMATION IS DISCARDED. `Result := Self` below is taken before the loop, and
+//     _SetSuccessValue/_SetFailureValue write into Self, so the returned pair carries the
+//     pre-transformation state.
+//
+//  2) USE-AFTER-FREE. The value is adopted with _SetSuccessValue(LResult.ValueSuccess) and the
+//     `finally` immediately disposes LResult, freeing the object the adopted pointer refers to.
+//     Post-#7 this is silent for <class, class>; pre-#7 it aborted with 'Value is nil.'. Full
+//     account in the note above _ReturnFailure.
+//
+//  3) THE CHAIN DOES NOT COMPOSE. Each step is fed from `Result.FSuccess.GetValue` - the stale
+//     copy - instead of the accumulating Self, so with two or more success functions every step
+//     sees the ORIGINAL value rather than its predecessor's output.
+//
+// Not fixed here for the same reason: the fix is an ownership refactor of the Return chain
+// (issue #8), which changes Return's observable result.
 function TResultPair<S, F>._ReturnSuccess: TResultPair<S, F>;
 var
   LFor: Integer;
