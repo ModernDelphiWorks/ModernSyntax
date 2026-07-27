@@ -437,7 +437,7 @@ begin
     if LInner.IsType<TOption<U>> then
       Result := LInner.AsType<TOption<U>>
     else
-      raise Exception.Create('Flatten sï¿½ pode ser usado quando T ï¿½ TOption<U>');
+      raise Exception.Create('Flatten só pode ser usado quando T é TOption<U>');
   end
   else
     Result := TOption<U>.None;
