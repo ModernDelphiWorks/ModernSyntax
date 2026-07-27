@@ -9,9 +9,16 @@
       }
     ],
     "component": {
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
       "name": "ModernSyntax",
       "purl": "pkg:github/ModernDelphiWorks/ModernSyntax@1.1.0",
-      "type": "application",
+      "type": "library",
       "version": "1.1.0"
     },
     "timestamp": "2026-06-10T00:37:02.396Z"

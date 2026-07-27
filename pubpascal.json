@@ -3,6 +3,7 @@
   "name": "ModernSyntax",
   "version": "1.1.0",
   "kind": "runtime",
+  "license": "MIT",
   "sources": ["./Source/"],
   "platforms": ["Win32", "Win64"],
   "dependencies": {}

@@ -3,6 +3,7 @@
   "description": "ModernSyntax brings modern, fluent, and expressive syntax to Delphi, making code cleaner and development more productive.",
   "version": "1.0.0",
   "homepage": "https://github.com/ModernDelphiWorks/ModernSyntax",
+  "license": "MIT",
   "mainsrc": "./Source",
   "projects": [],
   "dependencies": {}
