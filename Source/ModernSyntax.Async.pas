@@ -77,6 +77,28 @@ type
     ///   cannot be read safely; the future reports the timeout and discards whatever the
     ///   orphan task may produce later.
     ///   With the default INFINITE there is no deadline and the behaviour is unchanged.
+    ///
+    ///   THE ORPHAN TASK OUTLIVES THE AWAIT - KEEP THE TAsync ALIVE. A timeout does not cancel
+    ///   anything: the worker keeps running, and it holds LSelf := @Self, a RAW POINTER to this
+    ///   record (ModernSyntax.Async.pas:258, :352, :406 and :444), which it dereferences to
+    ///   reach FProc/FFunc. If the TAsync was a temporary, its storage is gone the moment the
+    ///   expression ends and the orphan dereferences dead memory. So with a FINITE deadline the
+    ///   fluent form is unsafe:
+    ///
+    ///     LFuture := Async(LWork).Await(50);   // WRONG: the TAsync is a temporary
+    ///
+    ///     LAsync  := Async(LWork);             // RIGHT: named variable, outlives the orphan
+    ///     LFuture := LAsync.Await(50);
+    ///     // ...and keep LAsync in scope until LAsync.Status is Completed/Exception, or the
+    ///     // work is otherwise known to have finished.
+    ///
+    ///   The lifetime hazard is older than the timeout support, but it used to be unreachable
+    ///   in practice: with INFINITE the await only returns after the task is done, so the
+    ///   record is never released early. Finite deadlines - and the timeout/retry style they
+    ///   invite - are what make the orphan a real exposure.
+    ///
+    ///   USE IsAwaitTimeout(LFuture) to tell a blown deadline from a task failure; do not
+    ///   pattern-match the message text yourself.
     /// </remarks>
     function Await(const AContinue: TProc; const ATimeout: Cardinal = INFINITE): TFuture; overload; inline;
 
@@ -86,6 +108,9 @@ type
     /// <remarks>
     ///   Same TIMEOUT semantics and precedence documented in the overload above: an expired
     ///   deadline yields IsErr with a timeout message, never a success.
+    ///   The same lifetime rule applies: with a finite deadline the orphan task keeps
+    ///   dereferencing @Self, so hold the TAsync in a named variable instead of awaiting a
+    ///   temporary. Use IsAwaitTimeout to classify the result.
     /// </remarks>
     function Await(const ATimeout: Cardinal = INFINITE): TFuture; overload; inline;
     function Run: TFuture; overload;
@@ -101,12 +126,52 @@ type
 function Async(const AProc: TProc): TAsync; overload; inline;
 function Async(const AFunc: TFunc<TValue>): TAsync; overload; inline;
 
+/// <summary>
+///   True when <paramref name="AFuture"/> is the error produced by an Await deadline that
+///   expired, as opposed to an error produced by the task itself.
+/// </summary>
+/// <remarks>
+///   THE ONE SUPPORTED WAY TO CLASSIFY A RED FUTURE. Before this existed the only way to tell
+///   a blown deadline from a task failure was Pos('TIMEOUT', LFuture.Err) over the message -
+///   which silently breaks the day the message is reworded, and misfires whenever a task's own
+///   exception happens to contain the word.
+///   Returns False for a successful future, for an empty error, and for any error the task
+///   raised. See the note on the timeout message in the implementation for why the text is
+///   frozen instead of TFuture carrying a discriminator field.
+/// </remarks>
+function IsAwaitTimeout(const AFuture: TFuture): Boolean;
+
 implementation
 
-resourcestring
-  // Says TIMEOUT out loud and quotes the deadline: whoever debugs a red future has to be
-  // able to tell "the task failed" apart from "the task ran out of time".
-  SAsyncAwaitTimeout = 'Async await TIMEOUT: the task did not complete within %d ms. ' +
+const
+  // FROZEN PUBLIC CONTRACT - DO NOT TRANSLATE, DO NOT REWORD THE PREFIX.
+  // ------------------------------------------------------------------
+  // A timeout is only distinguishable from a task failure by this message: TFuture carries
+  // FValue/FErr/FIsOk/FIsErr and nothing that says WHY it is red. Two ways out were considered:
+  //
+  //   (a) give TFuture a discriminator (an error-kind enum, or an IsTimeout flag);
+  //   (b) freeze the message and expose the classification in exactly one place.
+  //
+  // (b) was chosen, deliberately, because (a) changes public surface that is not this unit's to
+  // change. TFuture lives in ModernSyntax.pas, is the return type of the whole Async API AND of
+  // TFuncCoroutine in ModernSyntax.Coroutine, and is built by consumers directly through
+  // SetOk/SetErr. A new state that only Await knows how to set would default to "not a timeout"
+  // in every existing SetErr call site - inside this repository and in consumer code - so the
+  // discriminator would be correct only where it was retrofitted and quietly wrong everywhere
+  // else. That is a worse contract than a frozen string.
+  //
+  // Consequences of the choice, all intentional:
+  //   * this is a const, NOT a resourcestring - a resourcestring is exactly what a translation
+  //     tool patches, and translating it would break every consumer and the test suite at once,
+  //     silently. Making it non-localizable is the enforcement, not just the documentation;
+  //   * the ASCII prefix in C_AWAIT_TIMEOUT_TAG is the contract. The tail after the tag is free
+  //     to be improved; the tag is not;
+  //   * consumers must classify with IsAwaitTimeout, never with their own Pos/Copy over Err.
+  //
+  // If a discriminator is ever wanted, it is an additive change to TFuture with a migration for
+  // every SetErr call site - a separate PR, not a side effect of a documentation pass.
+  C_AWAIT_TIMEOUT_TAG = 'Async await TIMEOUT:';
+  C_AWAIT_TIMEOUT_MESSAGE = C_AWAIT_TIMEOUT_TAG + ' the task did not complete within %d ms. ' +
     'The task was not canceled and may still be running; its result and any exception it ' +
     'raises are discarded.';
 
@@ -127,7 +192,20 @@ end;
 
 function _AwaitTimeoutMessage(const ATimeout: Cardinal): String;
 begin
-  Result := Format(SAsyncAwaitTimeout, [ATimeout]);
+  Result := Format(C_AWAIT_TIMEOUT_MESSAGE, [ATimeout]);
+end;
+
+function IsAwaitTimeout(const AFuture: TFuture): Boolean;
+var
+  LErr: String;
+begin
+  Result := False;
+  if not AFuture.IsErr then
+    Exit;
+  LErr := AFuture.Err;
+  // Anchored at position 1 on purpose: a task whose own exception message merely CONTAINS the
+  // word must not be misread as a blown deadline.
+  Result := Copy(LErr, 1, Length(C_AWAIT_TIMEOUT_TAG)) = C_AWAIT_TIMEOUT_TAG;
 end;
 
 function Async(const AProc: TProc): TAsync;

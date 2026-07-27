@@ -100,7 +100,7 @@ end;
 
 procedure TTestTResultPair.TearDown;
 begin
-  // Nï¿½o precisa de Dispose, liberaï¿½ï¿½o ï¿½ automï¿½tica
+  // Não precisa de Dispose, liberação é automática
 end;
 
 procedure TTestTResultPair.TestFailure;
