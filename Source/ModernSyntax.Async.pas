@@ -340,7 +340,14 @@ var
 begin
   LLink := TAsyncLink(ALink as TObject);
   if not LLink.TakeWork(LProc, LFunc) then
+  begin
+    // Dropped by Cancel (the state is already gone from the link) or created with a nil routine
+    // (the state is still here): a nil routine is a no-op that completes
+    LState := LLink.TakeState;
+    if LState <> nil then
+      _State(LState).Publish(TValue.Empty, False, '', LError);
     Exit;
+  end;
   LRaised := False;
   try
     if Assigned(LFunc) then
