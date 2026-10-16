@@ -11,6 +11,35 @@ This file starts at `v1.2.0`; for anything older, read the git history.
 
 ## [Unreleased]
 
+### ⚠️ BREAKING — `TAsync` runs its routine once, and the task owns its state
+
+Fixes [#13](https://github.com/ModernDelphiWorks/ModernSyntax/issues/13), [#14](https://github.com/ModernDelphiWorks/ModernSyntax/issues/14), [#15](https://github.com/ModernDelphiWorks/ModernSyntax/issues/15), [#16](https://github.com/ModernDelphiWorks/ModernSyntax/issues/16) and [#17](https://github.com/ModernDelphiWorks/ModernSyntax/issues/17).
+
+`TAsync` now keeps its state in a reference-counted object (`IAsyncState`) that the worker task
+also holds. The record is a handle; copies share the same task.
+
+- **One execution per `TAsync`** (#15): `Await` after `Run`/`NoAwait` waits for the task that is
+  already running, and a second `Await` returns the same outcome. Before, every `Await` started a
+  new task, so `Run` + `Await` executed the routine twice. **Who breaks:** code that called
+  `Await` repeatedly on the same `TAsync` to run the routine again; create a new `Async(...)` instead.
+- **No lock across the wait** (#13): `Status`, `Cancel`, `GetId` and `CheckCanceled` called from
+  another thread return immediately during an `Await`, so a cooperative routine can now be
+  cancelled while it is being awaited. `Await` on a cancelled task returns an error future
+  instead of raising.
+- **Continuation on the awaiting thread** (#14): `Await(AContinue)` runs the continuation inline,
+  on the thread that called `Await`, before returning; its exception is the error of the future.
+  On the main thread this is what already happened; on any other thread the continuation used to
+  be queued to the main thread and never ran in a console app or a service.
+- **Fire-and-forget failures are observable** (#16): when the routine raises, `Status` reports
+  `TTaskStatus.Exception` (it used to be `Completed`) and a later `Await` returns the error.
+  `Run(AError)`/`NoAwait(AError)` still deliver the handler through `TThread.Queue`.
+- **Orphans are safe:** with a finite deadline the orphan task holds the shared state, not a
+  pointer to the record, so `Async(...).Await(50)` on a temporary is no longer a dangling-pointer
+  hazard.
+- **New: `AwaitAll` and `AwaitAny`** (#17): start several tasks and wait for all of them under one
+  shared deadline (results in order), or for the first one to finish. Like `Await`, an expired
+  deadline does not cancel the tasks.
+
 ### ⚠️ BREAKING — `Await(timeout)` no longer reports success on a blown deadline
 
 Merged in [#7](https://github.com/ModernDelphiWorks/ModernSyntax/pull/7).

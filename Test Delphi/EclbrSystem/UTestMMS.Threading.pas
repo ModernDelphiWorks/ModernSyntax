@@ -10,6 +10,8 @@ uses
   Classes,
   SyncObjs,
   Generics.Collections,
+  Diagnostics,
+  Threading,
   ModernSyntax.Async,
   ModernSyntax;
 
@@ -54,6 +56,30 @@ type
     procedure TestIsAwaitTimeoutClassifiesWithoutStringSniffing;
     [Test]
     procedure TestAwaitTaskExceptionWinsWhenTaskFinishedInTime;
+    // --- shared state (#13, #15, orphan lifetime) ---
+    [Test]
+    procedure TestStatusDoesNotBlockDuringAwait;
+    [Test]
+    procedure TestCancelReachesTaskDuringAwait;
+    [Test]
+    procedure TestRunThenAwaitExecutesOnce;
+    [Test]
+    procedure TestAwaitTwiceExecutesOnce;
+    [Test]
+    procedure TestFluentAwaitTimeoutIsSafe;
+    // --- continuation on the awaiting thread (#14) ---
+    [Test]
+    procedure TestContinuationRunsOnAwaitingThread;
+    // --- failures of fire-and-forget tasks (#16) ---
+    [Test]
+    procedure TestNoAwaitFailureIsObservable;
+    // --- AwaitAll / AwaitAny (#17) ---
+    [Test]
+    procedure TestAwaitAllRunsConcurrently;
+    [Test]
+    procedure TestAwaitAllSharesOneDeadline;
+    [Test]
+    procedure TestAwaitAnyReturnsFirstToFinish;
   end;
 
 implementation
@@ -397,6 +423,292 @@ begin
   Assert.IsTrue(LFuture.IsErr);
   Assert.AreEqual('failed fast', LFuture.Err,
     'the task failed within the deadline: its own message is what surfaces');
+end;
+
+{ Shared state
+
+  The task holds a reference-counted state object, never a pointer to the TAsync record, and the
+  lock that guards it is never held across ITask.Wait. Each test below failed before that change:
+  Status blocked for the whole Await (#13), Run + Await executed the routine twice (#15), and an
+  Await with a finite deadline on a temporary TAsync left the orphan task with a dangling pointer. }
+
+procedure TTesTStd.TestStatusDoesNotBlockDuringAwait;
+var
+  LAsync: TAsync;
+  LWaiter: TThread;
+  LWatch: TStopwatch;
+  LStatus: TTaskStatus;
+begin
+  LAsync := Async(procedure
+                  begin
+                    Sleep(1500);
+                  end);
+  LWaiter := TThread.CreateAnonymousThread(procedure
+                                           begin
+                                             LAsync.Await;
+                                           end);
+  LWaiter.FreeOnTerminate := False;
+  LWaiter.Start;
+  try
+    Sleep(150);
+    LWatch := TStopwatch.StartNew;
+    LStatus := LAsync.Status;
+    LWatch.Stop;
+    Assert.IsTrue(LWatch.ElapsedMilliseconds < 200,
+      Format('Status must not wait for the Await of another thread (took %d ms)', [LWatch.ElapsedMilliseconds]));
+    Assert.IsTrue(LStatus in [TTaskStatus.WaitingToRun, TTaskStatus.Running],
+      'the task is still running while it is awaited');
+  finally
+    LWaiter.WaitFor;
+    LWaiter.Free;
+  end;
+end;
+
+procedure TTesTStd.TestCancelReachesTaskDuringAwait;
+var
+  LAsync: TAsync;
+  LCanceller: TAsync;
+  LWatch: TStopwatch;
+  LFuture: TFuture;
+begin
+  // The routine checks for cancellation cooperatively; Cancel comes from another task while
+  // this thread is inside Await. Before the fix Cancel blocked until the routine finished.
+  LAsync := Async(procedure
+                  var
+                    LIndex: Integer;
+                  begin
+                    for LIndex := 1 to 300 do
+                    begin
+                      Sleep(10);
+                      LAsync.CheckCanceled;
+                    end;
+                  end);
+  LCanceller := Async(procedure
+                      begin
+                        Sleep(150);
+                        LAsync.Cancel;
+                      end);
+  LCanceller.Run;
+  LWatch := TStopwatch.StartNew;
+  LFuture := LAsync.Await(CGenerousMs);
+  LWatch.Stop;
+  LCanceller.Await;
+  Assert.IsTrue(LFuture.IsErr, 'a cancelled routine ends in error');
+  Assert.IsFalse(IsAwaitTimeout(LFuture), 'cancellation is not a timeout');
+  Assert.IsTrue(LWatch.ElapsedMilliseconds < 1500,
+    Format('Cancel reached the routine during Await (took %d ms of 3000)', [LWatch.ElapsedMilliseconds]));
+end;
+
+procedure TTesTStd.TestRunThenAwaitExecutesOnce;
+var
+  LAsync: TAsync;
+  LCount: Integer;
+  LFuture: TFuture;
+begin
+  LCount := 0;
+  LAsync := Async(procedure
+                  begin
+                    Sleep(100);
+                    TInterlocked.Increment(LCount);
+                  end);
+  Assert.IsTrue(LAsync.Run.IsOk);
+  LFuture := LAsync.Await(CGenerousMs);
+  Assert.IsTrue(LFuture.IsOk);
+  Sleep(200);
+  Assert.AreEqual(1, LCount, 'Await after Run waits for the running task; it does not start another');
+end;
+
+procedure TTesTStd.TestAwaitTwiceExecutesOnce;
+var
+  LAsync: TAsync;
+  LCount: Integer;
+begin
+  LCount := 0;
+  LAsync := Async(function: TValue
+                  begin
+                    Result := TInterlocked.Increment(LCount);
+                  end);
+  Assert.AreEqual(1, LAsync.Await.Ok<Integer>);
+  Assert.AreEqual(1, LAsync.Await.Ok<Integer>, 'a second Await returns the same outcome');
+  Assert.AreEqual(1, LCount, 'and the routine ran once');
+end;
+
+procedure TTesTStd.TestFluentAwaitTimeoutIsSafe;
+var
+  LFuture: TFuture;
+  LDone: Integer;
+begin
+  // The fluent form on a temporary used to be documented as WRONG with a finite deadline: the
+  // orphan dereferenced the dead record. The orphan now owns a reference to the shared state.
+  LDone := 0;
+  LFuture := Async(procedure
+                   begin
+                     Sleep(CTaskSleepMs);
+                     TInterlocked.Exchange(LDone, 1);
+                   end)
+            .Await(CDeadlineMs);
+  Assert.IsTrue(IsAwaitTimeout(LFuture));
+  Sleep(CDrainMs);
+  Assert.AreEqual(1, LDone, 'the orphan ran to completion without touching freed memory');
+end;
+
+{ Continuation (#14)
+
+  The continuation used to be posted with TThread.Queue: on the main thread that runs at once,
+  on any other thread it was queued to the main thread and, in a console app or a service,
+  never ran. It now runs inline on the thread that called Await. }
+
+procedure TTesTStd.TestContinuationRunsOnAwaitingThread;
+var
+  LWorker: TThread;
+  LRan: Boolean;
+  LContinueThread, LWorkerThread: TThreadID;
+  LFailed: TFuture;
+begin
+  LRan := False;
+  LContinueThread := 0;
+  LWorkerThread := 0;
+  LWorker := TThread.CreateAnonymousThread(
+    procedure
+    begin
+      LWorkerThread := TThread.CurrentThread.ThreadID;
+      Async(procedure
+            begin
+            end)
+      .Await(procedure
+             begin
+               LRan := True;
+               LContinueThread := TThread.CurrentThread.ThreadID;
+             end);
+      LFailed := Async(procedure
+                       begin
+                       end)
+                 .Await(procedure
+                        begin
+                          raise Exception.Create('continuation failed');
+                        end);
+    end);
+  LWorker.FreeOnTerminate := False;
+  LWorker.Start;
+  LWorker.WaitFor;
+  LWorker.Free;
+  Assert.IsTrue(LRan, 'the continuation ran before Await returned, off the main thread');
+  Assert.AreEqual(LWorkerThread, LContinueThread, 'on the thread that called Await');
+  Assert.IsTrue(LFailed.IsErr, 'an exception in the continuation is the error of the future');
+  Assert.AreEqual('continuation failed', LFailed.Err);
+end;
+
+{ Fire-and-forget failures (#16)
+
+  The routine's exception is caught inside the task, so the ITask always ended Completed and the
+  error was lost. Status now reports Exception and a later Await returns the error. }
+
+procedure TTesTStd.TestNoAwaitFailureIsObservable;
+var
+  LAsync: TAsync;
+  LWatch: TStopwatch;
+  LFuture: TFuture;
+begin
+  LAsync := Async(procedure
+                  begin
+                    raise Exception.Create('background failure');
+                  end);
+  Assert.IsTrue(LAsync.NoAwait.IsOk, 'NoAwait itself only starts the task');
+  LWatch := TStopwatch.StartNew;
+  while (LAsync.Status <> TTaskStatus.Exception) and (LWatch.ElapsedMilliseconds < 3000) do
+    Sleep(5);
+  Assert.AreEqual(Ord(TTaskStatus.Exception), Ord(LAsync.Status), 'Status reports the failure');
+  LFuture := LAsync.Await;
+  Assert.IsTrue(LFuture.IsErr);
+  Assert.AreEqual('background failure', LFuture.Err, 'a later Await returns the error');
+end;
+
+{ AwaitAll / AwaitAny (#17)
+
+  Await starts and waits, so awaiting N tasks in a loop ran them one after another.
+  AwaitAll starts every task first and waits under one shared deadline (like asyncio.gather or
+  futures::join_all, results in order); AwaitAny returns the first to finish. As with Await, an
+  expired deadline does not cancel anything - unlike asyncio.wait_for and tokio::time::timeout,
+  which cancel; the frozen Await contract of this unit is kept. }
+
+procedure TTesTStd.TestAwaitAllRunsConcurrently;
+var
+  LWatch: TStopwatch;
+  LFutures: TArray<TFuture>;
+  LIndex: Integer;
+
+  function Work(AValue: Integer): TAsync;
+  begin
+    Result := Async(function: TValue
+                    begin
+                      Sleep(300);
+                      Result := AValue;
+                    end);
+  end;
+
+begin
+  LWatch := TStopwatch.StartNew;
+  LFutures := AwaitAll([Work(10), Work(20), Work(30), Work(40)], CGenerousMs);
+  LWatch.Stop;
+  Assert.AreEqual(NativeInt(4), Length(LFutures));
+  for LIndex := 0 to 3 do
+  begin
+    Assert.IsTrue(LFutures[LIndex].IsOk);
+    Assert.AreEqual((LIndex + 1) * 10, LFutures[LIndex].Ok<Integer>, 'results come back in order');
+  end;
+  Assert.IsTrue(LWatch.ElapsedMilliseconds < 900,
+    Format('4 tasks of 300 ms ran concurrently (took %d ms; sequential would be 1200)', [LWatch.ElapsedMilliseconds]));
+end;
+
+procedure TTesTStd.TestAwaitAllSharesOneDeadline;
+var
+  LWatch: TStopwatch;
+  LFutures: TArray<TFuture>;
+begin
+  LWatch := TStopwatch.StartNew;
+  LFutures := AwaitAll([
+    Async(function: TValue begin Result := 'fast'; end),
+    Async(procedure begin Sleep(CTaskSleepMs); end),
+    Async(procedure begin Sleep(CTaskSleepMs); end)],
+    CDeadlineMs);
+  LWatch.Stop;
+  try
+    Assert.IsTrue(LFutures[0].IsOk);
+    Assert.AreEqual('fast', LFutures[0].Ok<String>);
+    Assert.IsTrue(IsAwaitTimeout(LFutures[1]), 'a task still running at the deadline times out');
+    Assert.IsTrue(IsAwaitTimeout(LFutures[2]), 'the deadline is shared, not restarted per task');
+    Assert.IsTrue(Pos(IntToStr(CDeadlineMs) + ' ms', LFutures[2].Err) > 0,
+      'the message quotes the deadline the caller asked for: ' + LFutures[2].Err);
+    Assert.IsTrue(LWatch.ElapsedMilliseconds < CTaskSleepMs,
+      Format('AwaitAll returned at the deadline (took %d ms)', [LWatch.ElapsedMilliseconds]));
+  finally
+    Sleep(CDrainMs);
+  end;
+end;
+
+procedure TTesTStd.TestAwaitAnyReturnsFirstToFinish;
+var
+  LIndex: Integer;
+  LFuture: TFuture;
+begin
+  LFuture := AwaitAny([
+    Async(function: TValue begin Sleep(CTaskSleepMs); Result := 'slow'; end),
+    Async(function: TValue begin Sleep(20); Result := 'quick'; end)],
+    LIndex, CGenerousMs);
+  try
+    Assert.AreEqual(1, LIndex, 'the quick task finished first');
+    Assert.AreEqual('quick', LFuture.Ok<String>);
+  finally
+    Sleep(CDrainMs);
+  end;
+
+  LFuture := AwaitAny([Async(procedure begin Sleep(CTaskSleepMs); end)], LIndex, CDeadlineMs);
+  try
+    Assert.AreEqual(-1, LIndex, 'no task finished inside the deadline');
+    Assert.IsTrue(IsAwaitTimeout(LFuture));
+  finally
+    Sleep(CDrainMs);
+  end;
 end;
 
 initialization
