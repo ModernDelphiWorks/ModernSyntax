@@ -69,6 +69,14 @@ type
     procedure TestFluentAwaitTimeoutIsSafe;
     [Test]
     procedure TestFinishedTaskReleasesWhatItCaptured;
+    [Test]
+    procedure TestCancelBeforeStartReleasesRoutine;
+    [Test]
+    procedure TestCancelRaceAlwaysReleasesRoutine;
+    [Test]
+    procedure TestRoutineCapturingItsTaskIsReleased;
+    [Test]
+    procedure TestUncreatedAsyncIsAnError;
     // --- continuation on the awaiting thread (#14) ---
     [Test]
     procedure TestContinuationRunsOnAwaitingThread;
@@ -82,6 +90,8 @@ type
     procedure TestAwaitAllSharesOneDeadline;
     [Test]
     procedure TestAwaitAnyReturnsFirstToFinish;
+    [Test]
+    procedure TestAwaitAnyReportsCancelledTask;
   end;
 
 implementation
@@ -536,7 +546,7 @@ begin
 end;
 
 type
-  { Sets the flag it points to when it is destroyed: proves a capture was released }
+  { Increments the counter it points to when it is destroyed: proves a capture was released }
   TReleaseSentinel = class(TInterfacedObject)
   private
     FFreed: PInteger;
@@ -553,7 +563,7 @@ end;
 
 destructor TReleaseSentinel.Destroy;
 begin
-  TInterlocked.Exchange(FFreed^, 1);
+  TInterlocked.Increment(FFreed^);
   inherited;
 end;
 
@@ -583,6 +593,119 @@ begin
   while (TInterlocked.CompareExchange(LFreed, 0, 0) = 0) and (LWatch.ElapsedMilliseconds < 3000) do
     Sleep(10);
   Assert.AreEqual(1, LFreed, 'the routine and its captures are released after the task completes');
+end;
+
+function WaitFreed(var AFreed: Integer; AExpected: Integer): Integer;
+var
+  LWatch: TStopwatch;
+begin
+  LWatch := TStopwatch.StartNew;
+  while (TInterlocked.CompareExchange(AFreed, 0, 0) < AExpected) and (LWatch.ElapsedMilliseconds < 3000) do
+    Sleep(10);
+  Result := TInterlocked.CompareExchange(AFreed, 0, 0);
+end;
+
+procedure CancelBeforeStart(AFreed: PInteger; out AStatus: TTaskStatus; out AFuture: TFuture);
+var
+  LSentinel: IInterface;
+  LAsync: TAsync;
+begin
+  LSentinel := TReleaseSentinel.Create(AFreed);
+  LAsync := Async(procedure
+                  begin
+                    if LSentinel = nil then
+                      Abort;
+                  end);
+  LAsync.Cancel;
+  AStatus := LAsync.Status;
+  AFuture := LAsync.Await;
+end;
+
+procedure TTesTStd.TestCancelBeforeStartReleasesRoutine;
+var
+  LFreed: Integer;
+  LStatus: TTaskStatus;
+  LFuture: TFuture;
+begin
+  // Cancel before Run/Await: the routine never runs and is released right away
+  LFreed := 0;
+  CancelBeforeStart(@LFreed, LStatus, LFuture);
+  Assert.AreEqual(Ord(TTaskStatus.Canceled), Ord(LStatus), 'a task cancelled before it starts is Canceled');
+  Assert.IsTrue(LFuture.IsErr, 'awaiting it is an error');
+  Assert.IsFalse(IsAwaitTimeout(LFuture), 'and not a timeout');
+  Assert.AreEqual(1, WaitFreed(LFreed, 1), 'the routine and its captures were released');
+end;
+
+procedure RunThenCancel(AFreed: PInteger);
+var
+  LSentinel: IInterface;
+  LAsync: TAsync;
+begin
+  LSentinel := TReleaseSentinel.Create(AFreed);
+  LAsync := Async(procedure
+                  begin
+                    if LSentinel = nil then
+                      Abort;
+                  end);
+  LAsync.Run;
+  LAsync.Cancel;     // races with the pool: the task may be queued, running or done
+  LAsync.Await;
+end;
+
+procedure TTesTStd.TestCancelRaceAlwaysReleasesRoutine;
+const
+  CRounds = 100;
+var
+  LFreed: Integer;
+  LRound: Integer;
+begin
+  // Whatever Cancel hits - a queued task the pool will never run, a running one or a finished
+  // one - the routine must be released. A queued cancelled task never runs its code, so a
+  // cleanup that lives inside the routine's wrapper would leak here.
+  LFreed := 0;
+  for LRound := 1 to CRounds do
+    RunThenCancel(@LFreed);
+  Assert.AreEqual(CRounds, WaitFreed(LFreed, CRounds), 'every routine was released');
+end;
+
+procedure AwaitTaskThatChecksItself(AFreed: PInteger);
+var
+  LSentinel: IInterface;
+  LAsync: TAsync;
+begin
+  // The routine captures its own TAsync (the CheckCanceled pattern): routine -> TAsync -> state
+  LSentinel := TReleaseSentinel.Create(AFreed);
+  LAsync := Async(procedure
+                  begin
+                    LAsync.CheckCanceled;
+                    if LSentinel = nil then
+                      Abort;
+                  end);
+  LAsync.Await;
+end;
+
+procedure TTesTStd.TestRoutineCapturingItsTaskIsReleased;
+var
+  LFreed: Integer;
+begin
+  LFreed := 0;
+  AwaitTaskThatChecksItself(@LFreed);
+  Assert.AreEqual(1, WaitFreed(LFreed, 1), 'a routine that captures its own TAsync is released once it ran');
+end;
+
+procedure TTesTStd.TestUncreatedAsyncIsAnError;
+var
+  LAsync: TAsync;
+  LFuture: TFuture;
+begin
+  // A TAsync that never went through Async(...) is an error, not an access violation
+  LAsync := Default(TAsync);
+  LFuture := LAsync.Await;
+  Assert.IsTrue(LFuture.IsErr);
+  Assert.IsFalse(IsAwaitTimeout(LFuture));
+  Assert.AreEqual(Ord(TTaskStatus.Created), Ord(LAsync.Status));
+  Assert.AreEqual(-1, LAsync.GetId);
+  LAsync.Cancel;
 end;
 
 procedure TTesTStd.TestFluentAwaitTimeoutIsSafe;
@@ -716,10 +839,17 @@ procedure TTesTStd.TestAwaitAllSharesOneDeadline;
 var
   LWatch: TStopwatch;
   LFutures: TArray<TFuture>;
+  LIndex: Integer;
 begin
+  // Six slow tasks: with a deadline restarted per task (6 x 60 ms > 300 ms) the last ones would
+  // finish inside their own slice and come back green
   LWatch := TStopwatch.StartNew;
   LFutures := AwaitAll([
     Async(function: TValue begin Result := 'fast'; end),
+    Async(procedure begin Sleep(CTaskSleepMs); end),
+    Async(procedure begin Sleep(CTaskSleepMs); end),
+    Async(procedure begin Sleep(CTaskSleepMs); end),
+    Async(procedure begin Sleep(CTaskSleepMs); end),
     Async(procedure begin Sleep(CTaskSleepMs); end),
     Async(procedure begin Sleep(CTaskSleepMs); end)],
     CDeadlineMs);
@@ -727,10 +857,11 @@ begin
   try
     Assert.IsTrue(LFutures[0].IsOk);
     Assert.AreEqual('fast', LFutures[0].Ok<String>);
-    Assert.IsTrue(IsAwaitTimeout(LFutures[1]), 'a task still running at the deadline times out');
-    Assert.IsTrue(IsAwaitTimeout(LFutures[2]), 'the deadline is shared, not restarted per task');
-    Assert.IsTrue(Pos(IntToStr(CDeadlineMs) + ' ms', LFutures[2].Err) > 0,
-      'the message quotes the deadline the caller asked for: ' + LFutures[2].Err);
+    for LIndex := 1 to 6 do
+      Assert.IsTrue(IsAwaitTimeout(LFutures[LIndex]),
+        Format('slow task %d times out: the deadline is shared, not restarted per task', [LIndex]));
+    Assert.IsTrue(Pos(IntToStr(CDeadlineMs) + ' ms', LFutures[6].Err) > 0,
+      'the message quotes the deadline the caller asked for: ' + LFutures[6].Err);
     Assert.IsTrue(LWatch.ElapsedMilliseconds < CTaskSleepMs,
       Format('AwaitAll returned at the deadline (took %d ms)', [LWatch.ElapsedMilliseconds]));
   finally
@@ -758,6 +889,25 @@ begin
   try
     Assert.AreEqual(-1, LIndex, 'no task finished inside the deadline');
     Assert.IsTrue(IsAwaitTimeout(LFuture));
+  finally
+    Sleep(CDrainMs);
+  end;
+end;
+
+procedure TTesTStd.TestAwaitAnyReportsCancelledTask;
+var
+  LCancelled: TAsync;
+  LIndex: Integer;
+  LFuture: TFuture;
+begin
+  // A cancelled task has finished too: AwaitAny says which one it was (asyncio puts it in "done")
+  LCancelled := Async(procedure begin Sleep(CTaskSleepMs); end);
+  LCancelled.Cancel;
+  LFuture := AwaitAny([Async(procedure begin Sleep(CTaskSleepMs); end), LCancelled], LIndex, CGenerousMs);
+  try
+    Assert.AreEqual(1, LIndex, 'the cancelled task is the one that finished');
+    Assert.IsTrue(LFuture.IsErr, 'its future is an error');
+    Assert.IsFalse(IsAwaitTimeout(LFuture), 'and not a timeout');
   finally
     Sleep(CDrainMs);
   end;

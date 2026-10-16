@@ -46,28 +46,26 @@ type
     procedure Release; inline;
   end;
 
+  PAsync = ^TAsync;
+
   /// <summary>
-  ///   Shared, reference-counted state of one asynchronous routine.
+  ///   Handle to one asynchronous routine. Copies of a TAsync share the same task.
   /// </summary>
   /// <remarks>
-  ///   The worker task holds a reference to this object, never a pointer to the TAsync record.
-  ///   That is what makes every copy of a TAsync, and every orphan left behind by an expired
-  ///   deadline, safe: the state lives as long as anyone - the caller or the worker - still uses it.
+  ///   OWNERSHIP: the record holds a reference-counted state object. The worker task never holds
+  ///   that state: it holds the routine and a WEAK link back to the state. So nothing a routine
+  ///   captures - not even the TAsync itself, as in the LAsync.CheckCanceled pattern - can form a
+  ///   reference cycle once the task has run or has been cancelled.
+  ///   One case still keeps memory: a TAsync that is NEVER started (no Run/NoAwait/Await) and
+  ///   whose routine captures that same TAsync. Start it, or Cancel it, to release the routine.
+  ///
+  ///   PROCESS EXIT: the RTL thread pool waits for its running tasks when the process ends. An
+  ///   orphan left behind by an expired deadline therefore delays the exit until its routine
+  ///   returns. Long routines should be cooperative (call CheckCanceled) and be cancelled.
   /// </remarks>
-  IAsyncState = interface
-    ['{6F0B7D2E-31A4-4C5E-9B8D-2A7E5C1F9D43}']
-    function Start: ITask;
-    function Task: ITask;
-    function WaitFuture(const AContinue: TProc; const ATimeout: Cardinal): TFuture;
-    function IsFunc: Boolean;
-    function Failed: Boolean;
-    procedure SetErrorHandler(const AError: TFunc<Exception, TFuture>);
-  end;
-
-  PAsync = ^TAsync;
   TAsync = record
   private
-    FState: IAsyncState;
+    FState: IInterface;
     constructor Create(const AProc: TProc); overload;
     constructor Create(const AFunc: TFunc<TValue>); overload;
   public
@@ -85,8 +83,11 @@ type
     ///   was a TIMEOUT and quotes the deadline in milliseconds. The continuation is NOT
     ///   executed and no success value is published. The timeout wins over a task exception.
     ///   A timeout does not cancel anything: the task keeps running and may be awaited again.
-    ///   The orphan task keeps its own reference to the shared state, so a TAsync that goes out
-    ///   of scope after a timeout is safe (the fluent Async(...).Await(50) form included).
+    ///   A TAsync that goes out of scope after a timeout is safe (the fluent
+    ///   Async(...).Await(50) form included); see PROCESS EXIT on the type.
+    ///
+    ///   CANCELLATION: Await on a cancelled task returns an error future (not a timeout) instead
+    ///   of raising.
     ///
     ///   CONTINUATION: <paramref name="AContinue"/> runs on the thread that called Await, right
     ///   after the task completes and before Await returns. An exception it raises becomes the
@@ -98,15 +99,15 @@ type
     ///   USE IsAwaitTimeout(LFuture) to tell a blown deadline from a task failure; do not
     ///   pattern-match the message text yourself.
     /// </remarks>
-    function Await(const AContinue: TProc; const ATimeout: Cardinal = INFINITE): TFuture; overload; inline;
+    function Await(const AContinue: TProc; const ATimeout: Cardinal = INFINITE): TFuture; overload;
 
     /// <summary>
     ///   Starts the routine if it is not running yet, waits for it and returns the future.
     /// </summary>
     /// <remarks>
-    ///   Same single-execution, TIMEOUT and lifetime semantics as the overload above.
+    ///   Same single-execution, TIMEOUT, cancellation and lifetime semantics as the overload above.
     /// </remarks>
-    function Await(const ATimeout: Cardinal = INFINITE): TFuture; overload; inline;
+    function Await(const ATimeout: Cardinal = INFINITE): TFuture; overload;
 
     /// <summary>
     ///   Starts the routine (procedure form) and returns at once.
@@ -114,19 +115,27 @@ type
     /// <remarks>
     ///   A routine that raises leaves the task observable as failed: Status reports
     ///   TTaskStatus.Exception and a later Await returns the error. The optional AError of the
-    ///   overload below is still delivered through TThread.Queue (main thread), as before.
+    ///   overload below is still delivered through TThread.Queue (main thread), as before; the
+    ///   Exception passed to it is freed after the handler returns.
     /// </remarks>
     function Run: TFuture; overload;
-    function Run(const AError: TFunc<Exception, TFuture>): TFuture; overload; inline;
+    function Run(const AError: TFunc<Exception, TFuture>): TFuture; overload;
     function NoAwait: TFuture; overload;
-    function NoAwait(const AError: TFunc<Exception, TFuture>): TFuture; overload; inline;
+    function NoAwait(const AError: TFunc<Exception, TFuture>): TFuture; overload;
 
     /// <summary>
-    ///   Status of the task: Created before it starts, Exception when the routine raised.
-    ///   Never blocks, also while another thread is inside Await.
+    ///   Status of the task: Created before it starts, Canceled when it was cancelled before its
+    ///   routine ran, Exception when the routine raised. Never blocks, also while another thread
+    ///   is inside Await.
     /// </summary>
     function Status: TTaskStatus;
     function GetId: Integer;
+
+    /// <summary>
+    ///   Cancels the task. Before the routine runs (not started yet, or still queued) the
+    ///   routine is dropped and never runs; while it runs, it observes the cancellation through
+    ///   CheckCanceled.
+    /// </summary>
     procedure Cancel;
     procedure CheckCanceled;
   end;
@@ -141,16 +150,18 @@ function Async(const AFunc: TFunc<TValue>): TAsync; overload; inline;
 ///   The tasks run concurrently: the total wait is about the slowest task, not the sum.
 ///   Result[I] is the future of ATasks[I], with the same semantics as TAsync.Await; a task
 ///   still running when the deadline expires gets the timeout error (see IsAwaitTimeout).
+///   Like Await, an expired deadline does not cancel the tasks.
 /// </remarks>
 function AwaitAll(const ATasks: array of TAsync; const ATimeout: Cardinal = INFINITE): TArray<TFuture>;
 
 /// <summary>
-///   Starts every task and waits for the first one to complete.
+///   Starts every task and waits for the first one to finish (completed, failed or cancelled).
 /// </summary>
 /// <remarks>
-///   AIndex receives the position of that task in ATasks, and the result is its future.
-///   When the deadline expires first, AIndex is -1 and the result is the timeout error.
-///   The other tasks keep running and can still be awaited.
+///   AIndex receives the position of that task in ATasks, and the result is its future (an
+///   error future when it failed or was cancelled). When several have finished, the lowest
+///   index wins. When the deadline expires first, AIndex is -1 and the result is the timeout
+///   error. The other tasks keep running and can still be awaited.
 /// </remarks>
 function AwaitAny(const ATasks: array of TAsync; out AIndex: Integer;
   const ATimeout: Cardinal = INFINITE): TFuture;
@@ -171,6 +182,9 @@ function AwaitAny(const ATasks: array of TAsync; out AIndex: Integer;
 function IsAwaitTimeout(const AFuture: TFuture): Boolean;
 
 implementation
+
+uses
+  SysConst;
 
 const
   // FROZEN PUBLIC CONTRACT - DO NOT TRANSLATE, DO NOT REWORD THE PREFIX.
@@ -204,35 +218,67 @@ const
     'The task was not canceled and may still be running; its result and any exception it ' +
     'raises are discarded.';
   C_RUN_AS_FUNCTION_MESSAGE = 'The "Run" method should not be invoked as a function. Utilize the "Await" method to wait for task completion and access the result, or invoke it as a procedure.';
+  C_NOT_CREATED_MESSAGE = 'TAsync was not created: use Async(...) to create it.';
+  C_ANY_EMPTY_MESSAGE = 'AwaitAny needs at least one task';
+  C_POLL_SLICE_MS = 20;
 
 type
-  { The one implementation of IAsyncState. Every field is guarded by FLock, and FLock is only
-    held for short, non-blocking sections - never across ITask.Wait. }
-  TAsyncState = class(TInterfacedObject, IAsyncState)
+  { What the worker task holds: the routine (until it runs or is cancelled) and a WEAK link back
+    to the state. The state holds the task strongly, so a strong reference here would close the
+    cycle state -> task -> closure -> state. }
+  TAsyncLink = class(TInterfacedObject)
+  private
+    FLock: TCriticalSection;
+    [Weak] FState: IInterface;
+    FProc: TProc;
+    FFunc: TFunc<TValue>;
+  public
+    constructor Create(const AState: IInterface; const AProc: TProc; const AFunc: TFunc<TValue>);
+    destructor Destroy; override;
+    { Moves the routine out (once). False when it was dropped by Cancel. }
+    function TakeWork(out AProc: TProc; out AFunc: TFunc<TValue>): Boolean;
+    procedure DropWork;
+    function State: IInterface;
+  end;
+
+  { Shared state of one TAsync. Every field is guarded by FLock, and FLock is only held for
+    short, non-blocking sections - never across ITask.Wait. }
+  TAsyncState = class(TInterfacedObject)
   private
     FLock: TCriticalSection;
     FProc: TProc;
     FFunc: TFunc<TValue>;
+    FIsFunc: Boolean;
     FTask: ITask;
+    FLink: IInterface;
+    FCancelRequested: Boolean;
+    FCompleted: Boolean;
+    FFailed: Boolean;
     FValue: TValue;
     FErrorMessage: String;
-    FFailed: Boolean;
     FError: TFunc<Exception, TFuture>;
-    procedure Execute;
   public
     constructor Create(const AProc: TProc; const AFunc: TFunc<TValue>);
     destructor Destroy; override;
     function Start: ITask;
     function Task: ITask;
     function WaitFuture(const AContinue: TProc; const ATimeout: Cardinal): TFuture;
-    function IsFunc: Boolean;
-    function Failed: Boolean;
+    procedure Publish(const AValue: TValue; ARaised: Boolean; const AMessage: String;
+      out AError: TFunc<Exception, TFuture>);
+    function GetStatus: TTaskStatus;
+    procedure Cancel;
     procedure SetErrorHandler(const AError: TFunc<Exception, TFuture>);
+    property IsFunc: Boolean read FIsFunc;
   end;
 
 function _AwaitTimeoutMessage(const ATimeout: Cardinal): String;
 begin
   Result := Format(C_AWAIT_TIMEOUT_MESSAGE, [ATimeout]);
+end;
+
+function _CancelledMessage: String;
+begin
+  Result := SOperationCancelled;
 end;
 
 function IsAwaitTimeout(const AFuture: TFuture): Boolean;
@@ -248,6 +294,128 @@ begin
   Result := Copy(LErr, 1, Length(C_AWAIT_TIMEOUT_TAG)) = C_AWAIT_TIMEOUT_TAG;
 end;
 
+function _State(const AState: IInterface): TAsyncState; inline;
+begin
+  Result := TAsyncState(AState as TObject);
+end;
+
+{ The handler call queued to the main thread; the Exception it receives is freed afterwards }
+function _ErrorDelivery(const AError: TFunc<Exception, TFuture>; const AMessage: String): TThreadProcedure;
+begin
+  Result :=
+    procedure
+    var
+      LException: Exception;
+    begin
+      LException := Exception.Create(AMessage);
+      try
+        AError(LException);
+      finally
+        LException.Free;
+      end;
+    end;
+end;
+
+{ Runs on the pool thread. Kept out of TAsyncState on purpose: the closure that TTask stores must
+  capture only the link, never the state (a method would capture Self). }
+procedure _RunLink(const ALink: IInterface);
+var
+  LLink: TAsyncLink;
+  LProc: TProc;
+  LFunc: TFunc<TValue>;
+  LValue: TValue;
+  LMessage: String;
+  LRaised: Boolean;
+  LState: IInterface;
+  LError: TFunc<Exception, TFuture>;
+begin
+  LLink := TAsyncLink(ALink as TObject);
+  if not LLink.TakeWork(LProc, LFunc) then
+    Exit;
+  LRaised := False;
+  try
+    if Assigned(LFunc) then
+      LValue := LFunc()
+    else if Assigned(LProc) then
+      LProc();
+  except
+    on E: Exception do
+    begin
+      LRaised := True;
+      LMessage := E.Message;
+    end;
+  end;
+  // Drop the routine (and what it captured) before publishing
+  LProc := nil;
+  LFunc := nil;
+
+  LState := LLink.State;
+  if LState = nil then
+    Exit; // nobody holds the TAsync any more: the outcome has no reader
+  _State(LState).Publish(LValue, LRaised, LMessage, LError);
+  LState := nil;
+
+  // Unchanged contract of Run(AError)/NoAwait(AError): the handler is delivered to the main thread
+  if LRaised and Assigned(LError) then
+    TThread.Queue(nil, _ErrorDelivery(LError, LMessage));
+end;
+
+function _StartTask(const ALink: IInterface): ITask;
+begin
+  Result := TTask.Run(
+    procedure
+    begin
+      _RunLink(ALink);
+    end);
+end;
+
+{ TAsyncLink }
+
+constructor TAsyncLink.Create(const AState: IInterface; const AProc: TProc; const AFunc: TFunc<TValue>);
+begin
+  inherited Create;
+  FLock := TCriticalSection.Create;
+  FState := AState;
+  FProc := AProc;
+  FFunc := AFunc;
+end;
+
+destructor TAsyncLink.Destroy;
+begin
+  FLock.Free;
+  inherited;
+end;
+
+function TAsyncLink.TakeWork(out AProc: TProc; out AFunc: TFunc<TValue>): Boolean;
+begin
+  FLock.Acquire;
+  try
+    AProc := FProc;
+    AFunc := FFunc;
+    FProc := nil;
+    FFunc := nil;
+    Result := Assigned(AProc) or Assigned(AFunc);
+  finally
+    FLock.Release;
+  end;
+end;
+
+procedure TAsyncLink.DropWork;
+begin
+  FLock.Acquire;
+  try
+    FProc := nil;
+    FFunc := nil;
+  finally
+    FLock.Release;
+  end;
+end;
+
+function TAsyncLink.State: IInterface;
+begin
+  Result := FState; // strong reference from the weak one, or nil when the state is gone
+end;
+
 { TAsyncState }
 
 constructor TAsyncState.Create(const AProc: TProc; const AFunc: TFunc<TValue>);
@@ -256,17 +424,13 @@ begin
   FLock := TCriticalSection.Create;
   FProc := AProc;
   FFunc := AFunc;
+  FIsFunc := Assigned(AFunc);
 end;
 
 destructor TAsyncState.Destroy;
 begin
   FLock.Free;
   inherited;
-end;
-
-function TAsyncState.IsFunc: Boolean;
-begin
-  Result := Assigned(FFunc);
 end;
 
 procedure TAsyncState.SetErrorHandler(const AError: TFunc<Exception, TFuture>);
@@ -279,67 +443,20 @@ begin
   end;
 end;
 
-procedure TAsyncState.Execute;
-var
-  LValue: TValue;
-  LMessage: String;
-  LRaised: Boolean;
-  LError: TFunc<Exception, TFuture>;
-begin
-  LRaised := False;
-  try
-    if Assigned(FFunc) then
-      LValue := FFunc()
-    else if Assigned(FProc) then
-      FProc();
-  except
-    on E: Exception do
-    begin
-      LRaised := True;
-      LMessage := E.Message;
-    end;
-  end;
-
-  FLock.Acquire;
-  try
-    FValue := LValue;
-    FFailed := LRaised;
-    FErrorMessage := LMessage;
-    LError := FError;
-  finally
-    FLock.Release;
-  end;
-
-  // Unchanged contract of Run(AError)/NoAwait(AError): the handler is delivered to the main thread
-  if LRaised and Assigned(LError) then
-    TThread.Queue(nil,
-      procedure
-      begin
-        LError(Exception.Create(LMessage));
-      end);
-end;
-
 function TAsyncState.Start: ITask;
 var
-  LSelf: IAsyncState;
+  LLink: IInterface;
 begin
   FLock.Acquire;
   try
-    if FTask = nil then
+    if (FTask = nil) and not FCancelRequested then
     begin
-      // The worker holds an interface reference: the state outlives any TAsync copy.
-      // It is dropped when the routine ends, because FTask -> closure -> LSelf -> FTask is a
-      // cycle that would otherwise keep the state, the task and everything they captured alive.
-      LSelf := Self;
-      FTask := TTask.Run(
-        procedure
-        begin
-          try
-            (LSelf as TAsyncState).Execute;
-          finally
-            LSelf := nil;
-          end;
-        end);
+      // The routine moves to the link: from here on the state no longer holds it
+      LLink := TAsyncLink.Create(Self, FProc, FFunc);
+      FProc := nil;
+      FFunc := nil;
+      FLink := LLink;
+      FTask := _StartTask(LLink);
     end;
     Result := FTask;
   finally
@@ -357,27 +474,96 @@ begin
   end;
 end;
 
-function TAsyncState.Failed: Boolean;
+procedure TAsyncState.Publish(const AValue: TValue; ARaised: Boolean; const AMessage: String;
+  out AError: TFunc<Exception, TFuture>);
 begin
   FLock.Acquire;
   try
-    Result := FFailed;
+    FValue := AValue;
+    FFailed := ARaised;
+    FErrorMessage := AMessage;
+    FCompleted := True;
+    AError := FError;
   finally
     FLock.Release;
+  end;
+end;
+
+procedure TAsyncState.Cancel;
+var
+  LTask: ITask;
+  LLink: IInterface;
+begin
+  FLock.Acquire;
+  try
+    FCancelRequested := True;
+    LTask := FTask;
+    LLink := FLink;
+    if LTask = nil then
+    begin
+      // Never started: drop the routine now, it will never run
+      FProc := nil;
+      FFunc := nil;
+    end;
+  finally
+    FLock.Release;
+  end;
+  if LTask <> nil then
+    LTask.Cancel;
+  // Still queued: the pool never runs a cancelled task, so the routine is released here
+  if LLink <> nil then
+    TAsyncLink(LLink as TObject).DropWork;
+end;
+
+function TAsyncState.GetStatus: TTaskStatus;
+var
+  LTask: ITask;
+  LCancelRequested, LCompleted, LFailed: Boolean;
+begin
+  FLock.Acquire;
+  try
+    LTask := FTask;
+    LCancelRequested := FCancelRequested;
+    LCompleted := FCompleted;
+    LFailed := FFailed;
+  finally
+    FLock.Release;
+  end;
+  if LTask = nil then
+  begin
+    if LCancelRequested then
+      Exit(TTaskStatus.Canceled);
+    Exit(TTaskStatus.Created);
+  end;
+  Result := LTask.Status;
+  if Result = TTaskStatus.Completed then
+  begin
+    // The routine's exception is caught inside the task (so Wait never raises for it), which
+    // leaves the ITask Completed: report what the routine actually did
+    if LFailed then
+      Result := TTaskStatus.Exception
+    else if not LCompleted then
+      Result := TTaskStatus.Canceled; // the routine was dropped by Cancel and never ran
   end;
 end;
 
 function TAsyncState.WaitFuture(const AContinue: TProc; const ATimeout: Cardinal): TFuture;
 var
   LTask: ITask;
-  LFailed: Boolean;
+  LCompleted, LFailed: Boolean;
   LMessage: String;
   LValue: TValue;
 begin
-  LTask := Start;
-  // Wait OUTSIDE the lock: Status/Cancel/GetId from other threads must not block on an Await.
-  // ITask.Wait returns False when the deadline expires; INFINITE never does.
   try
+    LTask := Start;
+    if LTask = nil then
+    begin
+      // Cancelled before it was ever started
+      Result.SetErr(_CancelledMessage);
+      Exit;
+    end;
+    // Wait OUTSIDE the lock: Status/Cancel/GetId from other threads must not block on an Await.
+    // ITask.Wait returns False when the deadline expires; INFINITE never does.
     if (not LTask.Wait(ATimeout)) and (ATimeout <> INFINITE) then
     begin
       Result.SetErr(_AwaitTimeoutMessage(ATimeout));
@@ -394,6 +580,7 @@ begin
 
   FLock.Acquire;
   try
+    LCompleted := FCompleted;
     LFailed := FFailed;
     LMessage := FErrorMessage;
     LValue := FValue;
@@ -401,6 +588,12 @@ begin
     FLock.Release;
   end;
 
+  if not LCompleted then
+  begin
+    // The task ended without running the routine: it was cancelled while queued
+    Result.SetErr(_CancelledMessage);
+    Exit;
+  end;
   if LFailed then
   begin
     Result.SetErr(LMessage);
@@ -419,7 +612,7 @@ begin
       end;
     end;
 
-  if Assigned(FFunc) then
+  if FIsFunc then
     Result.SetOk(LValue)
   else
     Result.SetOk(True);
@@ -449,23 +642,38 @@ end;
 
 function TAsync.Await(const AContinue: TProc; const ATimeout: Cardinal): TFuture;
 begin
-  Result := FState.WaitFuture(AContinue, ATimeout);
+  if FState = nil then
+  begin
+    Result.SetErr(C_NOT_CREATED_MESSAGE);
+    Exit;
+  end;
+  Result := _State(FState).WaitFuture(AContinue, ATimeout);
 end;
 
 function TAsync.Await(const ATimeout: Cardinal): TFuture;
 begin
-  Result := FState.WaitFuture(nil, ATimeout);
+  if FState = nil then
+  begin
+    Result.SetErr(C_NOT_CREATED_MESSAGE);
+    Exit;
+  end;
+  Result := _State(FState).WaitFuture(nil, ATimeout);
 end;
 
 function TAsync.Run: TFuture;
 begin
-  if FState.IsFunc then
+  if FState = nil then
+  begin
+    Result.SetErr(C_NOT_CREATED_MESSAGE);
+    Exit;
+  end;
+  if _State(FState).IsFunc then
   begin
     Result.SetErr(C_RUN_AS_FUNCTION_MESSAGE);
     Exit;
   end;
   try
-    FState.Start;
+    _State(FState).Start;
     Result.SetOk(True);
   except
     on E: Exception do
@@ -475,7 +683,8 @@ end;
 
 function TAsync.Run(const AError: TFunc<Exception, TFuture>): TFuture;
 begin
-  FState.SetErrorHandler(AError);
+  if FState <> nil then
+    _State(FState).SetErrorHandler(AError);
   Result := Run;
 end;
 
@@ -490,44 +699,37 @@ begin
 end;
 
 function TAsync.Status: TTaskStatus;
-var
-  LTask: ITask;
 begin
-  LTask := FState.Task;
-  if LTask = nil then
+  if FState = nil then
     Exit(TTaskStatus.Created);
-  Result := LTask.Status;
-  // The routine's exception is caught inside the task (so Wait never raises), which leaves the
-  // ITask Completed: report the failure the routine actually had.
-  if (Result = TTaskStatus.Completed) and FState.Failed then
-    Result := TTaskStatus.Exception;
+  Result := _State(FState).GetStatus;
 end;
 
 function TAsync.GetId: Integer;
 var
   LTask: ITask;
 begin
-  LTask := FState.Task;
+  Result := -1;
+  if FState = nil then
+    Exit;
+  LTask := _State(FState).Task;
   if LTask <> nil then
-    Result := LTask.GetId
-  else
-    Result := -1;
+    Result := LTask.GetId;
 end;
 
 procedure TAsync.Cancel;
-var
-  LTask: ITask;
 begin
-  LTask := FState.Task;
-  if LTask <> nil then
-    LTask.Cancel;
+  if FState <> nil then
+    _State(FState).Cancel;
 end;
 
 procedure TAsync.CheckCanceled;
 var
   LTask: ITask;
 begin
-  LTask := FState.Task;
+  if FState = nil then
+    Exit;
+  LTask := _State(FState).Task;
   if LTask <> nil then
     LTask.CheckCanceled;
 end;
@@ -544,7 +746,8 @@ begin
   SetLength(Result, Length(ATasks));
   // Start everything first, so the tasks overlap (Start, not Run: Run refuses the function form)
   for LIndex := 0 to High(ATasks) do
-    ATasks[LIndex].FState.Start;
+    if ATasks[LIndex].FState <> nil then
+      _State(ATasks[LIndex].FState).Start;
   LStart := TThread.GetTickCount64;
   for LIndex := 0 to High(ATasks) do
   begin
@@ -559,8 +762,7 @@ begin
         LRemaining := ATimeout - Cardinal(LElapsed);
     end;
     Result[LIndex] := ATasks[LIndex].Await(LRemaining);
-    // Await(0) on a task that is still running reports the timeout with the remaining budget
-    // (0 ms); report the deadline the caller asked for instead
+    // Await(LRemaining) quotes the remaining budget; report the deadline the caller asked for
     if IsAwaitTimeout(Result[LIndex]) then
       Result[LIndex].SetErr(_AwaitTimeoutMessage(ATimeout));
   end;
@@ -568,39 +770,49 @@ end;
 
 function AwaitAny(const ATasks: array of TAsync; out AIndex: Integer; const ATimeout: Cardinal): TFuture;
 var
-  LTasks: TArray<ITask>;
   LIndex: Integer;
-  LAsync: TAsync;
+  LStart: UInt64;
+  LTasks: TArray<ITask>;
+  LTask: ITask;
 begin
   AIndex := -1;
   if Length(ATasks) = 0 then
   begin
-    Result.SetErr('AwaitAny needs at least one task');
+    Result.SetErr(C_ANY_EMPTY_MESSAGE);
     Exit;
   end;
-  SetLength(LTasks, Length(ATasks));
   for LIndex := 0 to High(ATasks) do
-  begin
-    LAsync := ATasks[LIndex];
-    LTasks[LIndex] := LAsync.FState.Start;
-  end;
-  try
-    LIndex := TTask.WaitForAny(LTasks, ATimeout);
-  except
-    // A cancelled task makes WaitForAny raise: report it like Await does
-    on E: Exception do
+    if ATasks[LIndex].FState <> nil then
     begin
-      Result.SetErr(E.Message);
-      Exit;
+      LTask := _State(ATasks[LIndex].FState).Start;
+      if LTask <> nil then
+        LTasks := LTasks + [LTask];
     end;
-  end;
-  if LIndex < 0 then
-  begin
-    Result.SetErr(_AwaitTimeoutMessage(ATimeout));
-    Exit;
-  end;
-  AIndex := LIndex;
-  Result := ATasks[LIndex].Await;
+
+  LStart := TThread.GetTickCount64;
+  repeat
+    // A finished task - completed, failed or cancelled - is the answer; lowest index first
+    for LIndex := 0 to High(ATasks) do
+      if ATasks[LIndex].Status in [TTaskStatus.Completed, TTaskStatus.Canceled, TTaskStatus.Exception] then
+      begin
+        AIndex := LIndex;
+        Result := ATasks[LIndex].Await;
+        Exit;
+      end;
+    if (ATimeout <> INFINITE) and (TThread.GetTickCount64 - LStart >= ATimeout) then
+      Break;
+    // Sleep until something finishes (or a short slice): WaitForAny raises when the task that
+    // finished was cancelled, which only means "look again"
+    try
+      if Length(LTasks) > 0 then
+        TTask.WaitForAny(LTasks, C_POLL_SLICE_MS)
+      else
+        Sleep(C_POLL_SLICE_MS);
+    except
+      // see above
+    end;
+  until False;
+  Result.SetErr(_AwaitTimeoutMessage(ATimeout));
 end;
 
 { TAutoLock }
