@@ -327,12 +327,18 @@ begin
   try
     if FTask = nil then
     begin
-      // The worker holds an interface reference: the state outlives any TAsync copy
+      // The worker holds an interface reference: the state outlives any TAsync copy.
+      // It is dropped when the routine ends, because FTask -> closure -> LSelf -> FTask is a
+      // cycle that would otherwise keep the state, the task and everything they captured alive.
       LSelf := Self;
       FTask := TTask.Run(
         procedure
         begin
-          (LSelf as TAsyncState).Execute;
+          try
+            (LSelf as TAsyncState).Execute;
+          finally
+            LSelf := nil;
+          end;
         end);
     end;
     Result := FTask;

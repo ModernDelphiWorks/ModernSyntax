@@ -67,6 +67,8 @@ type
     procedure TestAwaitTwiceExecutesOnce;
     [Test]
     procedure TestFluentAwaitTimeoutIsSafe;
+    [Test]
+    procedure TestFinishedTaskReleasesWhatItCaptured;
     // --- continuation on the awaiting thread (#14) ---
     [Test]
     procedure TestContinuationRunsOnAwaitingThread;
@@ -531,6 +533,56 @@ begin
   Assert.AreEqual(1, LAsync.Await.Ok<Integer>);
   Assert.AreEqual(1, LAsync.Await.Ok<Integer>, 'a second Await returns the same outcome');
   Assert.AreEqual(1, LCount, 'and the routine ran once');
+end;
+
+type
+  { Sets the flag it points to when it is destroyed: proves a capture was released }
+  TReleaseSentinel = class(TInterfacedObject)
+  private
+    FFreed: PInteger;
+  public
+    constructor Create(AFreed: PInteger);
+    destructor Destroy; override;
+  end;
+
+constructor TReleaseSentinel.Create(AFreed: PInteger);
+begin
+  inherited Create;
+  FFreed := AFreed;
+end;
+
+destructor TReleaseSentinel.Destroy;
+begin
+  TInterlocked.Exchange(FFreed^, 1);
+  inherited;
+end;
+
+procedure AwaitWithCapturedSentinel(AFreed: PInteger);
+var
+  LSentinel: IInterface;
+begin
+  LSentinel := TReleaseSentinel.Create(AFreed);
+  Async(procedure
+        begin
+          if LSentinel = nil then
+            Abort;
+        end)
+  .Await;
+end;
+
+procedure TTesTStd.TestFinishedTaskReleasesWhatItCaptured;
+var
+  LFreed: Integer;
+  LWatch: TStopwatch;
+begin
+  // The state holds the task and the task holds the routine: once the routine has finished and
+  // the TAsync is gone, nothing may keep the closure - and what it captured - alive.
+  LFreed := 0;
+  AwaitWithCapturedSentinel(@LFreed);
+  LWatch := TStopwatch.StartNew;
+  while (TInterlocked.CompareExchange(LFreed, 0, 0) = 0) and (LWatch.ElapsedMilliseconds < 3000) do
+    Sleep(10);
+  Assert.AreEqual(1, LFreed, 'the routine and its captures are released after the task completes');
 end;
 
 procedure TTesTStd.TestFluentAwaitTimeoutIsSafe;
