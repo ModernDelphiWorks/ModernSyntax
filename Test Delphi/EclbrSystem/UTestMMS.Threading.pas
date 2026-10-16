@@ -77,6 +77,10 @@ type
     procedure TestRoutineCapturingItsTaskIsReleased;
     [Test]
     procedure TestUncreatedAsyncIsAnError;
+    [Test]
+    procedure TestNoAwaitOnTemporariesIsSafe;
+    [Test]
+    procedure TestNoAwaitErrorHandlerOutlivesTheCaller;
     // --- continuation on the awaiting thread (#14) ---
     [Test]
     procedure TestContinuationRunsOnAwaitingThread;
@@ -92,6 +96,8 @@ type
     procedure TestAwaitAnyReturnsFirstToFinish;
     [Test]
     procedure TestAwaitAnyReportsCancelledTask;
+    [Test]
+    procedure TestAwaitAnyDoesNotWaitForACancelledRoutine;
   end;
 
 implementation
@@ -708,6 +714,60 @@ begin
   LAsync.Cancel;
 end;
 
+procedure TTesTStd.TestNoAwaitOnTemporariesIsSafe;
+const
+  CRounds = 5000;
+var
+  LRan: Integer;
+  LRound: Integer;
+  LWatch: TStopwatch;
+begin
+  // Fire-and-forget on temporaries: the last TAsync copy dies while the pool thread is about to
+  // publish. A weak back-reference promoted on the pool thread resurrected a dying state here
+  // (AV / invalid pointer within ~1000 rounds on Win32).
+  LRan := 0;
+  for LRound := 1 to CRounds do
+    Async(procedure
+          begin
+            TInterlocked.Increment(LRan);
+          end).NoAwait;
+  LWatch := TStopwatch.StartNew;
+  while (TInterlocked.CompareExchange(LRan, 0, 0) < CRounds) and (LWatch.ElapsedMilliseconds < 20000) do
+    Sleep(10);
+  Assert.AreEqual(CRounds, TInterlocked.CompareExchange(LRan, 0, 0), 'every fire-and-forget routine ran');
+  Sleep(200); // let the last ones publish and release their state
+end;
+
+procedure FireAndForgetFailing(AHandled: PInteger);
+begin
+  // Returns before the routine fails: nothing but the task keeps the state (and its AError)
+  Async(procedure
+        begin
+          Sleep(100);
+          raise Exception.Create('late failure');
+        end)
+  .NoAwait(function(E: Exception): TFuture
+           begin
+             if E.Message = 'late failure' then
+               TInterlocked.Increment(AHandled^);
+             Result.SetErr(E.Message);
+           end);
+end;
+
+procedure TTesTStd.TestNoAwaitErrorHandlerOutlivesTheCaller;
+var
+  LHandled: Integer;
+  LWatch: TStopwatch;
+begin
+  LHandled := 0;
+  FireAndForgetFailing(@LHandled);
+  // AError is delivered through TThread.Queue to the main thread (this thread): pump the queue
+  LWatch := TStopwatch.StartNew;
+  while (TInterlocked.CompareExchange(LHandled, 0, 0) = 0) and (LWatch.ElapsedMilliseconds < 3000) do
+    CheckSynchronize(10);
+  Assert.AreEqual(1, LHandled, 'the AError handler ran although its caller had already returned');
+end;
+
 procedure TTesTStd.TestFluentAwaitTimeoutIsSafe;
 var
   LFuture: TFuture;
@@ -910,6 +970,33 @@ begin
     Assert.IsFalse(IsAwaitTimeout(LFuture), 'and not a timeout');
   finally
     Sleep(CDrainMs);
+  end;
+end;
+
+procedure TTesTStd.TestAwaitAnyDoesNotWaitForACancelledRoutine;
+var
+  LRunning: TAsync;
+  LIndex: Integer;
+  LFuture: TFuture;
+  LWatch: TStopwatch;
+begin
+  // Cancelled while its (non-cooperative) routine is running: it counts as finished, and AwaitAny
+  // answers without waiting for the routine to return
+  LRunning := Async(procedure begin Sleep(2000); end);
+  LRunning.Run;
+  Sleep(50);
+  LRunning.Cancel;
+  LWatch := TStopwatch.StartNew;
+  LFuture := AwaitAny([Async(procedure begin Sleep(2000); end), LRunning], LIndex, 300);
+  LWatch.Stop;
+  try
+    Assert.AreEqual(1, LIndex, 'the cancelled task is the answer');
+    Assert.IsTrue(LFuture.IsErr);
+    Assert.IsFalse(IsAwaitTimeout(LFuture));
+    Assert.IsTrue(LWatch.ElapsedMilliseconds < 300,
+      Format('AwaitAny answered in %d ms (deadline 300 ms; the routine still runs for ~2 s)', [LWatch.ElapsedMilliseconds]));
+  finally
+    Sleep(2500);
   end;
 end;
 
