@@ -52,10 +52,12 @@ type
   ///   Handle to one asynchronous routine. Copies of a TAsync share the same task.
   /// </summary>
   /// <remarks>
-  ///   OWNERSHIP: the record holds a reference-counted state object. The worker task never holds
-  ///   that state: it holds the routine and a WEAK link back to the state. So nothing a routine
-  ///   captures - not even the TAsync itself, as in the LAsync.CheckCanceled pattern - can form a
-  ///   reference cycle once the task has run or has been cancelled.
+  ///   OWNERSHIP: the record holds a reference-counted state object. The worker task holds a link
+  ///   with the routine and a reference to that state, and the link lets go of both explicitly:
+  ///   when the routine has run (after its outcome is published) and when Cancel drops a routine
+  ///   that has not run yet. So nothing a routine captures - not even the TAsync itself, as in the
+  ///   LAsync.CheckCanceled pattern - keeps a reference cycle alive once the task has run or has
+  ///   been cancelled, and a fire-and-forget task keeps its state (and its AError) until it ends.
   ///   One case still keeps memory: a TAsync that is NEVER started (no Run/NoAwait/Await) and
   ///   whose routine captures that same TAsync. Start it, or Cancel it, to release the routine.
   ///
@@ -223,22 +225,29 @@ const
   C_POLL_SLICE_MS = 20;
 
 type
-  { What the worker task holds: the routine (until it runs or is cancelled) and a WEAK link back
-    to the state. The state holds the task strongly, so a strong reference here would close the
-    cycle state -> task -> closure -> state. }
+  { What the worker task holds: the routine (until it runs or is cancelled) and a reference to the
+    state. state -> task -> closure -> link -> state is a cycle on purpose while the task is alive
+    (a fire-and-forget task must keep its state and its AError until it ends), and it is broken
+    explicitly: TakeState after the routine ran, DropWork when Cancel drops a routine that has not
+    run. A [Weak] back-reference is NOT an option: promoting a Delphi weak reference to a strong one
+    is a plain _AddRef with no "already zero" check, so the pool thread could resurrect a state that
+    the last TAsync was destroying (measured: AV / invalid pointer in a NoAwait loop). }
   TAsyncLink = class(TInterfacedObject)
   private
     FLock: TCriticalSection;
-    [Weak] FState: IInterface;
+    FState: IInterface;
     FProc: TProc;
     FFunc: TFunc<TValue>;
+    FTaken: Boolean;
   public
     constructor Create(const AState: IInterface; const AProc: TProc; const AFunc: TFunc<TValue>);
     destructor Destroy; override;
     { Moves the routine out (once). False when it was dropped by Cancel. }
     function TakeWork(out AProc: TProc; out AFunc: TFunc<TValue>): Boolean;
+    { Cancel: drops the routine and the state when the routine has not been taken yet }
     procedure DropWork;
-    function State: IInterface;
+    { After the routine ran: moves the state reference out, breaking the cycle }
+    function TakeState: IInterface;
   end;
 
   { Shared state of one TAsync. Every field is guarded by FLock, and FLock is only held for
@@ -331,7 +340,14 @@ var
 begin
   LLink := TAsyncLink(ALink as TObject);
   if not LLink.TakeWork(LProc, LFunc) then
+  begin
+    // Dropped by Cancel (the state is already gone from the link) or created with a nil routine
+    // (the state is still here): a nil routine is a no-op that completes
+    LState := LLink.TakeState;
+    if LState <> nil then
+      _State(LState).Publish(TValue.Empty, False, '', LError);
     Exit;
+  end;
   LRaised := False;
   try
     if Assigned(LFunc) then
@@ -349,9 +365,10 @@ begin
   LProc := nil;
   LFunc := nil;
 
-  LState := LLink.State;
+  // The link lets go of the state here: from now on only the TAsync copies keep it alive
+  LState := LLink.TakeState;
   if LState = nil then
-    Exit; // nobody holds the TAsync any more: the outcome has no reader
+    Exit;
   _State(LState).Publish(LValue, LRaised, LMessage, LError);
   LState := nil;
 
@@ -395,25 +412,47 @@ begin
     FProc := nil;
     FFunc := nil;
     Result := Assigned(AProc) or Assigned(AFunc);
+    FTaken := Result;
   finally
     FLock.Release;
   end;
 end;
 
 procedure TAsyncLink.DropWork;
+var
+  LState: IInterface;
+  LProc: TProc;
+  LFunc: TFunc<TValue>;
 begin
   FLock.Acquire;
   try
+    // A routine that is already running keeps the state: it still has to publish its outcome
+    if FTaken then
+      Exit;
+    LProc := FProc;
+    LFunc := FFunc;
+    LState := FState;
     FProc := nil;
     FFunc := nil;
+    FState := nil;
   finally
     FLock.Release;
   end;
+  // Released outside the lock: the routine or the state may hold the last reference to this link
+  LProc := nil;
+  LFunc := nil;
+  LState := nil;
 end;
 
-function TAsyncLink.State: IInterface;
+function TAsyncLink.TakeState: IInterface;
 begin
-  Result := FState; // strong reference from the weak one, or nil when the state is gone
+  FLock.Acquire;
+  try
+    Result := FState;
+    FState := nil;
+  finally
+    FLock.Release;
+  end;
 end;
 
 { TAsyncState }
@@ -793,11 +832,21 @@ begin
   repeat
     // A finished task - completed, failed or cancelled - is the answer; lowest index first
     for LIndex := 0 to High(ATasks) do
-      if ATasks[LIndex].Status in [TTaskStatus.Completed, TTaskStatus.Canceled, TTaskStatus.Exception] then
-      begin
-        AIndex := LIndex;
-        Result := ATasks[LIndex].Await;
-        Exit;
+      case ATasks[LIndex].Status of
+        TTaskStatus.Canceled:
+          begin
+            // A cancelled routine may still be running (cooperative cancellation): answer now,
+            // without waiting for it, so the deadline holds
+            AIndex := LIndex;
+            Result.SetErr(_CancelledMessage);
+            Exit;
+          end;
+        TTaskStatus.Completed, TTaskStatus.Exception:
+          begin
+            AIndex := LIndex;
+            Result := ATasks[LIndex].Await; // already finished: returns at once
+            Exit;
+          end;
       end;
     if (ATimeout <> INFINITE) and (TThread.GetTickCount64 - LStart >= ATimeout) then
       Break;
