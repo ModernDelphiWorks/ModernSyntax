@@ -16,9 +16,10 @@ This file starts at `v1.2.0`; for anything older, read the git history.
 Fixes [#13](https://github.com/ModernDelphiWorks/ModernSyntax/issues/13), [#14](https://github.com/ModernDelphiWorks/ModernSyntax/issues/14), [#15](https://github.com/ModernDelphiWorks/ModernSyntax/issues/15), [#16](https://github.com/ModernDelphiWorks/ModernSyntax/issues/16) and [#17](https://github.com/ModernDelphiWorks/ModernSyntax/issues/17).
 
 `TAsync` now keeps its state in a reference-counted object. The record is a handle; copies share
-the same task. The worker task does not hold that state: it holds the routine and a weak link back
-to it, so nothing a routine captures (not even its own `TAsync`, as in the `CheckCanceled`
-pattern) can form a reference cycle once the task has run or been cancelled.
+the same task. The worker task holds the routine and a reference to the state through a link that
+lets go of both explicitly - after the routine ran, or when `Cancel` drops a routine that has not
+run - so nothing a routine captures (not even its own `TAsync`, as in the `CheckCanceled` pattern)
+keeps a reference cycle alive, and a fire-and-forget task keeps its state and `AError` until it ends.
 
 - **One execution per `TAsync`** (#15): `Await` after `Run`/`NoAwait` waits for the task that is
   already running, and a second `Await` returns the same outcome. Before, every `Await` started a
